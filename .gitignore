@@ -1,0 +1,12 @@
+.terraform
+.envrc
+*.pyc
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.swp
+__pycache__
+.DS_Store
+.vscode
+tls-certificate*
+.terraform-assets
