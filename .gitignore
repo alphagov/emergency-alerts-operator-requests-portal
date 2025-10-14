@@ -1,12 +1,68 @@
-.terraform
-.envrc
-*.pyc
+# Terraform
+**/.terraform/*
 *.tfstate
-*.tfstate.backup
-*.tfvars
-*.swp
-__pycache__
+*.tfstate.*
+*.tfvars.backup
+*.tfplan
+*.tfplan.json
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Sensitive files
+*.pem
+*.key
+*.p12
+*.pfx
+backend.hcl
+backend-*.hcl
+secrets.auto.tfvars
+*-secrets.tfvars
+
+# Lambda deployment packages
+node_modules/
+package-lock.json
+*.pyc
+__pycache__/
+
+# OS files
 .DS_Store
-.vscode
-tls-certificate*
-.terraform-assets
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*~
+.project
+.settings/
+.classpath
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
