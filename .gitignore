@@ -5,6 +5,7 @@
 *.tfvars.backup
 *.tfplan
 *.tfplan.json
+.terraform-assets
 crash.log
 crash.*.log
 override.tf
