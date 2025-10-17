@@ -1,5 +1,5 @@
 resource "aws_dynamodb_table" "download_tracking" {
-  name         = "operator-request-portal-download-tracking-${var.environment}"
+  name         = "operator-request-portal-download-tracking"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "RequestId"
 
@@ -10,6 +10,6 @@ resource "aws_dynamodb_table" "download_tracking" {
 
   tags = {
     Environment = var.environment
-    Name        = "operator-request-portal-download-tracking-${var.environment}"
+    Name        = "operator-request-portal-download-tracking"
   }
 }

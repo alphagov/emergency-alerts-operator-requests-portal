@@ -1,5 +1,5 @@
 resource "aws_dynamodb_table" "certificates_table" {
-  name         = "operator-request-portal-mno-certificates-${var.environment}"
+  name         = "operator-request-portal-mno-certificates"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "MnoID"
   range_key    = "CertID"
@@ -15,12 +15,12 @@ resource "aws_dynamodb_table" "certificates_table" {
 
   tags = {
     Environment = var.environment
-    Name        = "operator-request-portal-mno-certificates-${var.environment}"
+    Name        = "operator-request-portal-mno-certificates"
   }
 }
 
 resource "aws_dynamodb_table" "mno_config_table" {
-  name         = "operator-request-portal-mno-config-${var.environment}"
+  name         = "operator-request-portal-mno-config"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "MnoID"
 
@@ -31,12 +31,12 @@ resource "aws_dynamodb_table" "mno_config_table" {
 
   tags = {
     Environment = var.environment
-    Name        = "operator-request-portal-mno-config-${var.environment}"
+    Name        = "operator-request-portal-mno-config"
   }
 }
 
 resource "aws_dynamodb_table" "mno_contacts_table" {
-  name         = "operator-request-portal-mno-contacts-${var.environment}"
+  name         = "operator-request-portal-mno-contacts"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "MnoID"
 
@@ -47,6 +47,6 @@ resource "aws_dynamodb_table" "mno_contacts_table" {
 
   tags = {
     Environment = var.environment
-    Name        = "operator-request-portal-mno-contacts-${var.environment}"
+    Name        = "operator-request-portal-mno-contacts"
   }
 }
