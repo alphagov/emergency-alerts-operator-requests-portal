@@ -33,6 +33,85 @@ locals {
   mno_contacts_table          = "${var.project_name}-mno-contacts-${var.environment}"
 }
 
+resource "aws_s3_bucket" "csr_bucket" {
+  bucket = local.csr_bucket_name
+
+  tags = merge(
+    var.tags,
+    {
+      Name    = local.csr_bucket_name
+      Purpose = "CSR Storage"
+    }
+  )
+}
+
+resource "aws_s3_bucket_versioning" "csr_bucket_versioning" {
+  bucket = aws_s3_bucket.csr_bucket.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "csr_bucket_public_access_block" {
+  bucket = aws_s3_bucket.csr_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "csr_bucket_encryption" {
+  bucket = aws_s3_bucket.csr_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Log Bucket
+resource "aws_s3_bucket" "log_bucket" {
+  bucket = local.log_bucket_name
+
+  tags = merge(
+    var.tags,
+    {
+      Name    = local.log_bucket_name
+      Purpose = "Log Storage"
+    }
+  )
+}
+
+resource "aws_s3_bucket_versioning" "log_bucket_versioning" {
+  bucket = aws_s3_bucket.log_bucket.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "log_bucket_public_access_block" {
+  bucket = aws_s3_bucket.log_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "log_bucket_encryption" {
+  bucket = aws_s3_bucket.log_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
 # Notify email communications service
 module "notify_email_communications" {
   source = "../../modules/operator-request-portal-lambda-functions/notify-email-communications"

@@ -6,6 +6,14 @@ resource "aws_lambda_permission" "allow_bucket" {
   source_arn    = "arn:aws:s3:::${var.csr_bucket_name}"
 }
 
+resource "aws_lambda_permission" "allow_bucket_notify_download" {
+  statement_id  = "AllowExecutionFromS3BucketForDownload"
+  action        = "lambda:InvokeFunction"
+  function_name = var.download_notify_lambda_arn
+  principal     = "s3.amazonaws.com"
+  source_arn    = "arn:aws:s3:::${var.csr_bucket_name}"
+}
+
 resource "aws_s3_bucket_notification" "bucket_notification" {
   bucket = var.csr_bucket_name
 

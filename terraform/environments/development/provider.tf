@@ -11,10 +11,10 @@ provider "aws" {
   region              = "eu-west-2"
   allowed_account_ids = ["435684131547"]
 
-  # assume_role {
-  #   role_arn     = local.deploy_role_arn
-  #   session_name = "operator-requests-terraform-${var.environment}"
-  # }
+  assume_role {
+    role_arn     = "arn:aws:iam::435684131547:role/operator-portal-deployer"
+    session_name = "operator-requests-terraform-${var.environment}"
+  }
 
   default_tags {
     tags = merge(
@@ -34,10 +34,10 @@ provider "aws" {
   region              = "us-east-1"
   allowed_account_ids = ["435684131547"]
 
-  # assume_role {
-  #   role_arn     = local.deploy_role_arn
-  #   session_name = "operator-requests-terraform-${var.environment}"
-  # }
+  assume_role {
+    role_arn     = "arn:aws:iam::435684131547:role/operator-portal-deployer"
+    session_name = "operator-requests-terraform-${var.environment}"
+  }
 
   default_tags {
     tags = merge(
