@@ -1,0 +1,36 @@
+name: Terraform Deployment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "terraform/**"
+      - ".github/workflows/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "terraform/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+jobs:
+  plan-development:
+    uses: ./.github/workflows/.terraform-plan.yml
+    with:
+      environment: development
+      working_directory: terraform/environments/development
+    secrets:
+      account_id: "435684131547"
+
+  apply-development:
+    needs: plan-development
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    uses: ./.github/workflows/.terraform-apply.yml
+    with:
+      environment: development
+      working_directory: terraform/environments/development
+      approval_required: false
+    secrets:
+      account_id: "435684131547"

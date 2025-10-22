@@ -1,0 +1,115 @@
+name: .terraform-plan
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: "Environment to plan (e.g., development)"
+      working_directory:
+        required: false
+        type: string
+        default: "terraform/environments/development"
+      artifact_prefix:
+        required: false
+        type: string
+        default: ""
+    
+    secrets:
+      account_id:
+        required: true
+
+jobs:
+  terraform-plan:
+    runs-on: self-hosted
+    environment: ${{ inputs.environment }}-plan
+    name: operator-requests-${{ inputs.environment }}-plan
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Assume Role
+        run: |
+          account_id=${{ secrets.account_id }}
+          echo "Assuming role for account ending: ${account_id: -4}"
+          
+          # Assume the operator-portal-deployer role
+          aws_credentials=$(aws sts assume-role \
+            --role-arn arn:aws:iam::${{ secrets.account_id }}:role/operator-portal-deployer \
+            --role-session-name "operator-requests-plan-${{ github.run_id }}" \
+            --output json)
+          
+          echo "Assume role credentials retrieved successfully"
+
+          export AWS_ACCESS_KEY_ID=$(echo $aws_credentials | jq '.Credentials.AccessKeyId' | tr -d '"')
+          export AWS_SECRET_ACCESS_KEY=$(echo $aws_credentials | jq '.Credentials.SecretAccessKey' | tr -d '"')
+          export AWS_SESSION_TOKEN=$(echo $aws_credentials | jq '.Credentials.SessionToken' | tr -d '"')
+
+          if [[ -z $AWS_ACCESS_KEY_ID ]] || [[ "$AWS_ACCESS_KEY_ID" == "" ]]; then
+            echo "Access Key Id was not able to be retrieved."
+            exit 1
+          fi
+
+          if [[ -z $AWS_SECRET_ACCESS_KEY ]] || [[ "$AWS_SECRET_ACCESS_KEY" == "" ]]; then
+            echo "Secret Access Key was not able to be retrieved."
+            exit 1
+          fi
+
+          if [[ -z $AWS_SESSION_TOKEN ]] || [[ "$AWS_SESSION_TOKEN" == "" ]]; then
+            echo "Session Token was not able to be retrieved."
+            exit 1
+          fi
+
+          echo "::add-mask::$AWS_ACCESS_KEY_ID"
+          echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
+          echo "::add-mask::$AWS_SESSION_TOKEN"
+
+          echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
+          echo "AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN" >> $GITHUB_ENV
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform Init
+        run: |
+          rm -rf .terraform
+          terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Terraform Plan
+        run: |
+          terraform plan -out=${{ github.workspace }}/${{ inputs.working_directory }}/${{ inputs.artifact_prefix }}operator-requests-${{ inputs.environment }}.tfplan
+
+      - name: Zip Artifact
+        run: |
+          zip -r ${{ inputs.artifact_prefix }}operator-requests-${{ inputs.environment }}.zip \
+            .terraform \
+            .terraform.lock.hcl \
+            ${{ inputs.artifact_prefix }}operator-requests-${{ inputs.environment }}.tfplan
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact_prefix }}operator-requests-${{ inputs.environment }}.zip
+          path: ${{ github.workspace }}/${{ inputs.working_directory }}/${{ inputs.artifact_prefix }}operator-requests-${{ inputs.environment }}.zip
+          if-no-files-found: error
+          retention-days: 4
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "Terraform plan failed for ${{ inputs.environment }}"

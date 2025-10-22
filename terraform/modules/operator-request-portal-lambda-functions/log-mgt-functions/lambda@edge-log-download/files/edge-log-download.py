@@ -26,7 +26,7 @@ def error_response(status_code: int, status_desc: str, body: str, error_type: st
         }],
         "content-type": [{
             "key": "Content-Type",
-            "value": "application/octet-stream"
+            "value": "text/plain; charset=utf-8"
         }]
     }
     if error_type:
