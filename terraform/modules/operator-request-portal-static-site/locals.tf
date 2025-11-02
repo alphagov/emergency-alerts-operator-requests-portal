@@ -1,19 +1,27 @@
 locals {
   bucket_name = "${var.project_name}-${var.environment}-static"
 
+  page_configs = {
+    "download-logs.html"      = { title = "Download Logs - Operator Portal", content_file = "download-logs.html" }
+    "download-success.html"   = { title = "Download Success - Operator Portal", content_file = "download-success.html" }
+    "error.html"              = { title = "Error - Operator Portal", content_file = "error.html" }
+    "index.html"              = { title = "Welcome to the Operator Portal", content_file = "index.html" }
+    "invalid-request.html"    = { title = "Invalid Request - Operator Portal", content_file = "invalid-request.html" }
+    "link-expired.html"       = { title = "Link Expired - Operator Portal", content_file = "link-expired.html" }
+    "link-invalid.html"       = { title = "Link Invalid - Operator Portal", content_file = "link-invalid.html" }
+    "max-limit.html"          = { title = "Maximum Limit Reached - Operator Portal", content_file = "max-limit.html" }
+    "method-not-allowed.html" = { title = "Method Not Allowed - Operator Portal", content_file = "method-not-allowed.html" }
+    "upload-logs.html"        = { title = "Upload Logs - Operator Portal", content_file = "upload-logs.html" }
+    "upload-success.html"     = { title = "Upload Success - Operator Portal", content_file = "upload-success.html" }
+    "upload.html"             = { title = "Upload CSR - Operator Portal", content_file = "upload.html" }
+  }
+
   default_html_files_map = {
-    "download-logs.html"      = format("%s/files/download-logs.html", path.module)
-    "download-success.html"   = format("%s/files/download-success.html", path.module)
-    "error.html"              = format("%s/files/error.html", path.module)
-    "index.html"              = format("%s/files/index.html", path.module)
-    "invalid-request.html"    = format("%s/files/invalid-request.html", path.module)
-    "link-expired.html"       = format("%s/files/link-expired.html", path.module)
-    "link-invalid.html"       = format("%s/files/link-invalid.html", path.module)
-    "max-limit.html"          = format("%s/files/max-limit.html", path.module)
-    "method-not-allowed.html" = format("%s/files/method-not-allowed.html", path.module)
-    "upload-logs.html"        = format("%s/files/upload-logs.html", path.module)
-    "upload-success.html"     = format("%s/files/upload-success.html", path.module)
-    "upload.html"             = format("%s/files/upload.html", path.module)
+    for key, config in local.page_configs :
+    key => templatefile("${path.module}/files/templates/page.html.tpl", {
+      title   = config.title
+      content = file("${path.module}/files/content/${config.content_file}")
+    })
   }
 
   resolved_html_files_map = length(var.html_files_map) > 0 ? var.html_files_map : local.default_html_files_map

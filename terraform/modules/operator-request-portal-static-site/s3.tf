@@ -34,6 +34,7 @@ resource "aws_s3_object" "html_files" {
   for_each     = local.resolved_html_files_map
   bucket       = aws_s3_bucket.static_site.bucket
   key          = each.key
-  source       = each.value
+  content      = each.value
   content_type = "text/html"
+  etag         = md5(each.value)
 }

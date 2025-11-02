@@ -1,0 +1,63 @@
+    <div class="govuk-width-container">
+      <main class="govuk-main-wrapper" id="main-content">
+        <h1 class="govuk-heading-xl">Upload Your Certificate Signing Request</h1>
+        <form>
+          <div class="govuk-form-group">
+            <label class="govuk-label" for="urlInput">Pre-signed URL</label>
+            <input type="text" id="urlInput" class="govuk-input" placeholder="Paste your pre-signed URL here">
+          </div>
+          <div class="govuk-form-group">
+            <label class="govuk-label" for="csrFile">Select CSR file</label>
+            <input type="file" id="csrFile" class="govuk-file-upload" accept=".csr">
+          </div>
+          <button type="button" class="govuk-button" onclick="uploadCSR()">Upload CSR</button>
+        </form>
+        <script>
+          async function uploadCSR() {
+            const url = document.getElementById('urlInput').value.trim();
+            const fileInput = document.getElementById('csrFile');
+            if (!url) {
+              alert("Please enter your custom upload URL.");
+              return;
+            }
+            if (fileInput.files.length === 0) {
+              alert("Please select a CSR file to upload.");
+              return;
+            }
+            const file = fileInput.files[0];
+
+            try {
+              const response = await fetch(url, {
+                method: 'PUT',
+                body: file,
+              });
+
+              if (response.ok) {
+                window.location.href = "upload-success.html";
+                return;
+              }
+
+              const text = await response.text();
+              const status = response.status;
+              if (status === 400) {
+                if (text.toLowerCase().includes("expired")) {
+                  window.location.href = "link-expired.html";
+                } else {
+                  window.location.href = "invalid-request.html";
+                }
+              }
+              else if (status === 405) {
+                window.location.href = "method-not-allowed.html";
+              }
+              else {
+                window.location.href = "error.html";
+              }
+            }
+            catch (err) {
+              console.error("Upload error:", err);
+              window.location.href = "error.html";
+            }
+          }
+        </script>
+      </main>
+    </div>
