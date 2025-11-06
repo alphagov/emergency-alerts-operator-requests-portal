@@ -34,7 +34,7 @@ resource "aws_iam_policy" "notify_lambda_policy" {
         Action = [
           "ssm:GetParameter"
         ],
-        Resource = "arn:${data.aws_partition.current.partition}:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter${var.notify_api_key_parameter}",
+        Resource = "arn:${data.aws_partition.current.partition}:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${var.notify_api_key_parameter}",
         Effect   = "Allow"
       }
     ]
