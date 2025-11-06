@@ -2,9 +2,9 @@ data "terraform_remote_state" "infra_mgt" {
   backend = "s3"
 
   config = {
-    bucket  = var.infra_mgt_state_bucket
-    key     = var.infra_mgt_state_key
-    region  = var.infra_mgt_state_region
+    bucket = var.infra_mgt_state_bucket
+    key    = var.infra_mgt_state_key
+    region = var.infra_mgt_state_region
   }
 }
 
@@ -25,6 +25,6 @@ locals {
 
   pca_arn = data.terraform_remote_state.infra_mgt.outputs.pca_arn
 
-  notify_templates    = data.terraform_remote_state.infra_mgt.outputs.notify_template_ids
-  alerts_team_emails  = data.terraform_remote_state.infra_mgt.outputs.alerts_team_emails
+  notify_templates   = data.terraform_remote_state.infra_mgt.outputs.notify_template_ids
+  alerts_team_emails = data.terraform_remote_state.infra_mgt.outputs.alerts_team_emails
 }

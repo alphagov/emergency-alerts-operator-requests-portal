@@ -38,7 +38,7 @@ variable "download_link_expiry_days" {
 variable "upload_link_expiry_seconds" {
   description = "Number of seconds upload links remain valid"
   type        = number
-  default     = 604800  # 7 days
+  default     = 604800 # 7 days
 }
 
 variable "tags" {

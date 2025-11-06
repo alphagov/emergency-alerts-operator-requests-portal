@@ -43,12 +43,12 @@ output "log_upload_lambda_arn" {
 output "dynamodb_tables" {
   description = "Names of all DynamoDB tables"
   value = {
-    certificates          = module.lambda_certificate_generation.certificates_table_name
-    mno_config            = module.lambda_certificate_generation.mno_config_table_name
-    mno_contacts          = module.lambda_certificate_generation.mno_contacts_table_name
-    download_tracking     = module.lambda_log_download.download_tracking_table_name
-    log_invite_tracking   = module.lambda_log_upload.log_invite_tracking_table_name
-    log_upload_tracking   = module.lambda_edge_log_upload.log_upload_tracking_table_name
-    csr_uploads           = module.lambda_edge_csr_upload.csr_uploads_table_name
+    certificates        = module.lambda_certificate_generation.certificates_table_name
+    mno_config          = module.lambda_certificate_generation.mno_config_table_name
+    mno_contacts        = module.lambda_certificate_generation.mno_contacts_table_name
+    download_tracking   = module.lambda_log_download.download_tracking_table_name
+    log_invite_tracking = module.lambda_log_upload.log_invite_tracking_table_name
+    log_upload_tracking = module.lambda_edge_log_upload.log_upload_tracking_table_name
+    csr_uploads         = module.lambda_edge_csr_upload.csr_uploads_table_name
   }
 }

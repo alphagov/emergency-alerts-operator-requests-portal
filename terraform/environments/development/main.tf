@@ -12,25 +12,25 @@ module "shared" {
 }
 
 locals {
-  hosted_zone_id              = module.shared.hosted_zone_id
-  domain_name                 = module.shared.domain_name
-  pca_arn                     = module.shared.pca_arn
-  notify_api_key_parameter    = module.shared.notify_api_key_parameter_name
-  notify_templates            = module.shared.notify_templates
-  alerts_team_emails          = module.shared.alerts_team_emails
+  hosted_zone_id           = module.shared.hosted_zone_id
+  domain_name              = module.shared.domain_name
+  pca_arn                  = module.shared.pca_arn
+  notify_api_key_parameter = module.shared.notify_api_key_parameter_name
+  notify_templates         = module.shared.notify_templates
+  alerts_team_emails       = module.shared.alerts_team_emails
 
-  environment                 = var.environment
-  project_name                = var.project_name
-  csr_bucket_name             = "${var.project_name}-csr-${var.environment}"
-  log_bucket_name             = "${var.project_name}-logs-${var.environment}"
-  static_bucket_name          = "${var.project_name}-static-${var.environment}"
-  download_tracking_table     = "${var.project_name}-download-tracking-${var.environment}"
-  log_invite_tracking_table   = "${var.project_name}-log-invite-tracking-${var.environment}"
-  log_upload_tracking_table   = "${var.project_name}-log-upload-tracking-${var.environment}"
-  csr_uploads_table           = "${var.project_name}-csr-uploads-${var.environment}"
-  certificates_table          = "${var.project_name}-certificates-${var.environment}"
-  mno_config_table            = "${var.project_name}-mno-config-${var.environment}"
-  mno_contacts_table          = "${var.project_name}-mno-contacts-${var.environment}"
+  environment               = var.environment
+  project_name              = var.project_name
+  csr_bucket_name           = "${var.project_name}-csr-${var.environment}"
+  log_bucket_name           = "${var.project_name}-logs-${var.environment}"
+  static_bucket_name        = "${var.project_name}-static-${var.environment}"
+  download_tracking_table   = "${var.project_name}-download-tracking-${var.environment}"
+  log_invite_tracking_table = "${var.project_name}-log-invite-tracking-${var.environment}"
+  log_upload_tracking_table = "${var.project_name}-log-upload-tracking-${var.environment}"
+  csr_uploads_table         = "${var.project_name}-csr-uploads-${var.environment}"
+  certificates_table        = "${var.project_name}-certificates-${var.environment}"
+  mno_config_table          = "${var.project_name}-mno-config-${var.environment}"
+  mno_contacts_table        = "${var.project_name}-mno-contacts-${var.environment}"
 }
 
 resource "aws_s3_bucket" "csr_bucket" {

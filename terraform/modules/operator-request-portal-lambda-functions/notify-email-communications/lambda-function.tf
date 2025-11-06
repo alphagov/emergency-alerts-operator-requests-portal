@@ -10,10 +10,10 @@ resource "aws_lambda_function" "notify_service_lambda" {
   runtime       = "python3.13"
   role          = aws_iam_role.notify_lambda_role.arn
 
-  filename      = data.archive_file.notify_service_zip.output_path
-  timeout       = 30
-  memory_size   = 128
-  layers        = [aws_lambda_layer_version.notify_layer.arn]
+  filename    = data.archive_file.notify_service_zip.output_path
+  timeout     = 30
+  memory_size = 128
+  layers      = [aws_lambda_layer_version.notify_layer.arn]
 
   environment {
     variables = {
