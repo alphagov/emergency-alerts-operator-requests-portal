@@ -114,7 +114,7 @@ resource "aws_cloudfront_distribution" "cdn" {
   # Because S3 website endpoints only support HTTP, accessing this via HTTPS will fail,
   # ensuring that only the defined behaviors are allowed.
   default_cache_behavior {
-    target_origin_id       = "S3-Web-Endpoint"
+    target_origin_id       = "S3-Endpoint"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]

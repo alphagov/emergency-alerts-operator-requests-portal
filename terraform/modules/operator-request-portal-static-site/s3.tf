@@ -38,3 +38,31 @@ resource "aws_s3_object" "html_files" {
   content_type = "text/html"
   etag         = md5(each.value)
 }
+
+resource "aws_s3_object" "assets" {
+  for_each = fileset("${path.module}/assets", "**/*")
+  
+  bucket       = aws_s3_bucket.static_site.bucket
+  key          = "assets/${each.value}"
+  source       = "${path.module}/assets/${each.value}"
+  content_type = lookup(
+    {
+      "css"  = "text/css"
+      "js"   = "application/javascript"
+      "svg"  = "image/svg+xml"
+      "png"  = "image/png"
+      "jpg"  = "image/jpeg"
+      "jpeg" = "image/jpeg"
+      "gif"  = "image/gif"
+      "woff" = "font/woff"
+      "woff2" = "font/woff2"
+      "ttf"  = "font/ttf"
+      "eot"  = "application/vnd.ms-fontobject"
+    },
+    element(split(".", each.value), length(split(".", each.value)) - 1),
+    "application/octet-stream"
+  )
+  etag = filemd5("${path.module}/assets/${each.value}")
+  
+  depends_on = [null_resource.build_assets]
+}

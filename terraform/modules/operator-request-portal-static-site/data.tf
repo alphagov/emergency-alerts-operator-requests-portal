@@ -20,7 +20,7 @@ data "aws_iam_policy_document" "static_site_policy_doc" {
       "s3:GetObject"
     ]
     resources = [
-      format("arn:aws:s3:::%s/*.html", aws_s3_bucket.static_site.bucket),
+      format("arn:aws:s3:::%s/*", aws_s3_bucket.static_site.bucket),
       format("arn:aws:s3:::%s/download/*", aws_s3_bucket.static_site.bucket)
     ]
     condition {

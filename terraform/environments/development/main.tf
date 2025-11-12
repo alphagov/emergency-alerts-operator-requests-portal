@@ -223,3 +223,24 @@ module "operator_request_portal_static_site" {
   lambda_log_upload_arn   = module.lambda_edge_log_upload.log_upload_edge_arn
   lambda_log_download_arn = module.lambda_edge_log_download.download_edge_lambda_arn
 }
+
+resource "null_resource" "lambda_dependencies" {
+  provisioner "local-exec" {
+    command = "cd ../../modules/operator-request-portal-static-site/files && npm install && npm run build"
+  }
+    triggers = {
+    dir_sha1 = sha1(join("", [for f in fileset("../../modules/operator-request-portal-static-site/files", "*"): filesha1("../../modules/operator-request-portal-static-site/files/${f}")]))
+  }
+}
+
+resource "null_resource" "build_assets" {
+  provisioner "local-exec" {
+    command = "cd ../../modules/operator-request-portal-static-site/files && npm install && npm run build"
+  }
+  
+  triggers = {
+    gulpfile = filesha1("../../modules/operator-request-portal-static-site/files/gulpfile.js")
+    package_json = filesha1("../../modules/operator-request-portal-static-site/files/package.json")
+    govuk_version = filesha1("../../modules/operator-request-portal-static-site/files/package-lock.json")
+  }
+}
