@@ -67,3 +67,6 @@ temp/
 *.tmp
 *.bak
 *.backup
+
+# Gulp build files
+terraform/modules/operator-request-portal-static-site/files/assets

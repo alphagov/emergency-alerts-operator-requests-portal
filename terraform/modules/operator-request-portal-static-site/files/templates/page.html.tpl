@@ -4,20 +4,10 @@
     <meta charset="utf-8">
     <title>${title}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/govuk-frontend/dist/govuk/govuk-frontend.min.css">
-    <link rel="icon" href = "assets/images/govuk-crest.svg">
-    <style>
-      @font-face {
-        font-family: "GDS Transport";
-        src: url("assets/fonts/light-94a07e06a1-v2.woff2") format("woff2");
-        font-weight: 400;
-      }
-      @font-face {
-        font-family: "GDS Transport";
-        src: url("assets/fonts/bold-b542beb274-v2.woff2") format("woff2");
-        font-weight: 700;
-      }
-    </style>
+    <link rel="stylesheet" href="assets/stylesheets/all.css">
+    <link rel="icon" href="assets/images/govuk-crest.svg">
+    <link rel="icon" sizes="48x48" href="assets/images/favicon.ico">
+    <link rel="icon" sizes="any" href="assets/images/favicon.svg" type="image/svg+xml">
   </head>
   <body class="govuk-template__body">
     <header class="govuk-header" data-module="govuk-header">
@@ -53,5 +43,6 @@
       </div>
     </header>
 ${content}
+${footer}
   </body>
 </html>

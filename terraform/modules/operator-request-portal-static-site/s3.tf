@@ -39,30 +39,42 @@ resource "aws_s3_object" "html_files" {
   etag         = md5(each.value)
 }
 
+resource "null_resource" "build_assets" {
+  triggers = {
+    gulpfile     = filesha1("${path.module}/files/gulpfile.js")
+    package_json = filesha1("${path.module}/files/package.json")
+    package_lock = filesha1("${path.module}/files/package-lock.json")
+  }
+
+  provisioner "local-exec" {
+    command = "cd ${path.module}/files && npm install && npm run build"
+  }
+}
+
 resource "aws_s3_object" "assets" {
-  for_each = fileset("${path.module}/assets", "**/*")
+  for_each = toset(try(fileset("${path.module}/files/assets", "**/*"), []))
   
   bucket       = aws_s3_bucket.static_site.bucket
   key          = "assets/${each.value}"
-  source       = "${path.module}/assets/${each.value}"
+  source       = "${path.module}/files/assets/${each.value}"
+  source_hash  = filemd5("${path.module}/files/assets/${each.value}")
   content_type = lookup(
     {
-      "css"  = "text/css"
-      "js"   = "application/javascript"
-      "svg"  = "image/svg+xml"
-      "png"  = "image/png"
-      "jpg"  = "image/jpeg"
-      "jpeg" = "image/jpeg"
-      "gif"  = "image/gif"
-      "woff" = "font/woff"
+      "css"   = "text/css"
+      "js"    = "application/javascript"
+      "svg"   = "image/svg+xml"
+      "png"   = "image/png"
+      "jpg"   = "image/jpeg"
+      "jpeg"  = "image/jpeg"
+      "gif"   = "image/gif"
+      "woff"  = "font/woff"
       "woff2" = "font/woff2"
-      "ttf"  = "font/ttf"
-      "eot"  = "application/vnd.ms-fontobject"
+      "ttf"   = "font/ttf"
+      "eot"   = "application/vnd.ms-fontobject"
     },
     element(split(".", each.value), length(split(".", each.value)) - 1),
     "application/octet-stream"
   )
-  etag = filemd5("${path.module}/assets/${each.value}")
-  
+
   depends_on = [null_resource.build_assets]
 }

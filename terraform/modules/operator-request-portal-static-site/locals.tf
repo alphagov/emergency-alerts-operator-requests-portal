@@ -1,6 +1,10 @@
 locals {
   bucket_name = "${var.project_name}-${var.environment}-static"
 
+  footer_html = templatefile("${path.module}/files/templates/footer.html.tpl", {
+    year = formatdate("YYYY", timestamp())
+  })
+
   page_configs = {
     "download-logs.html"      = { title = "Download Logs - Operator Portal", content_file = "download-logs.html" }
     "download-success.html"   = { title = "Download Success - Operator Portal", content_file = "download-success.html" }
@@ -21,6 +25,7 @@ locals {
     key => templatefile("${path.module}/files/templates/page.html.tpl", {
       title   = config.title
       content = file("${path.module}/files/content/${config.content_file}")
+      footer  = local.footer_html
     })
   }
 
