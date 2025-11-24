@@ -12,7 +12,7 @@ provider "aws" {
   allowed_account_ids = ["435684131547"]
 
   assume_role {
-    role_arn     = "arn:aws:iam::***:role/eas-terraformer"
+    role_arn     = "arn:aws:iam::435684131547:role/eas-terraformer"
     session_name = "operator-requests-terraform-${var.environment}"
   }
 
@@ -35,7 +35,7 @@ provider "aws" {
   allowed_account_ids = ["435684131547"]
 
   assume_role {
-    role_arn     = "arn:aws:iam::***:role/eas-terraformer"
+    role_arn     = "arn:aws:iam::435684131547:role/eas-terraformer"
     session_name = "operator-requests-terraform-${var.environment}"
   }
 
