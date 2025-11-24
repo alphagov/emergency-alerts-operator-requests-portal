@@ -49,6 +49,12 @@ jobs:
           npm install
           npm run build
 
+      - name: Build Lambda Layer
+        run: |
+          cd ../../modules/operator-request-portal-lambda-functions/notify-email-communications/files
+          mkdir -p notify_layer_package/python zip
+          python -m pip install -r notify-layer-requirements.txt -t notify_layer_package/python --upgrade
+
       - name: Assume Role
         run: |
           account_id=${{ secrets.account_id }}
