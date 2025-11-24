@@ -48,9 +48,9 @@ jobs:
           account_id=${{ secrets.account_id }}
           echo "Assuming role for account ending: ${account_id: -4}"
           
-          # Assume the operator-portal-deployer role
+          # Assume the eas-terraformer role
           aws_credentials=$(aws sts assume-role \
-            --role-arn arn:aws:iam::${{ secrets.account_id }}:role/operator-portal-deployer \
+            --role-arn arn:aws:iam::${{ secrets.account_id }}:role/eas-terraformer \
             --role-session-name "operator-requests-apply-${{ github.run_id }}" \
             --output json)
 
