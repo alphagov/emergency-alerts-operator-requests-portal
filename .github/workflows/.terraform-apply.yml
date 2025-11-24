@@ -43,6 +43,12 @@ jobs:
           name: ${{ inputs.artifact_prefix }}operator-requests-${{ inputs.environment }}.zip
           path: ${{ inputs.working_directory }}
 
+      - name: Build Static Assets
+        run: |
+          cd ../../modules/operator-request-portal-static-site/files
+          npm install
+          npm run build
+
       - name: Assume Role
         run: |
           account_id=${{ secrets.account_id }}

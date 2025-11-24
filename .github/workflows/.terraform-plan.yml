@@ -83,6 +83,12 @@ jobs:
           rm -rf .terraform
           terraform init
 
+      - name: Build Static Assets
+        run: |
+          cd ../../modules/operator-request-portal-static-site/files
+          npm install
+          npm run build
+
       - name: Terraform Validate
         run: terraform validate
 
