@@ -43,7 +43,7 @@ resource "null_resource" "build_assets" {
   triggers = {
     gulpfile     = filesha1("${path.module}/files/gulpfile.js")
     package_json = filesha1("${path.module}/files/package.json")
-    package_lock = filesha1("${path.module}/files/package-lock.json")
+    package_lock = fileexists("${path.module}/files/package-lock.json") ? filesha1("${path.module}/files/package-lock.json") : ""
   }
 
   provisioner "local-exec" {
@@ -53,11 +53,11 @@ resource "null_resource" "build_assets" {
 
 resource "aws_s3_object" "assets" {
   for_each = toset(try(fileset("${path.module}/files/assets", "**/*"), []))
-  
-  bucket       = aws_s3_bucket.static_site.bucket
-  key          = "assets/${each.value}"
-  source       = "${path.module}/files/assets/${each.value}"
-  source_hash  = filemd5("${path.module}/files/assets/${each.value}")
+
+  bucket      = aws_s3_bucket.static_site.bucket
+  key         = "assets/${each.value}"
+  source      = "${path.module}/files/assets/${each.value}"
+  source_hash = filemd5("${path.module}/files/assets/${each.value}")
   content_type = lookup(
     {
       "css"   = "text/css"
