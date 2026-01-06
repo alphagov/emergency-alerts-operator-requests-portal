@@ -1,0 +1,103 @@
+    <div class="govuk-width-container">
+      <main class="govuk-main-wrapper" id="main-content">
+        <h1 class="govuk-heading-xl">Download Logs</h1>
+
+        <form id="downloadForm">
+          <div class="govuk-form-group">
+            <label class="govuk-label" for="tokenInput"
+              >One-time download token</label
+            >
+            <input
+              type="text"
+              id="tokenInput"
+              class="govuk-input"
+              placeholder="Paste the token from your email here"
+            />
+          </div>
+          <button type="submit" class="govuk-button">Download Logs</button>
+        </form>
+
+        <div
+          id="statusMessage"
+          class="govuk-body"
+          style="display: none; margin-top: 1em"
+        ></div>
+
+        <script>
+          const DOWNLOAD_BASE =
+            "https://test-site.dev.emergency-alerts.service.gov.uk/download/?data=";
+
+          document.addEventListener("DOMContentLoaded", () => {
+            const form = document.getElementById("downloadForm");
+            const status = document.getElementById("statusMessage");
+
+            form.addEventListener("submit", async (e) => {
+              e.preventDefault();
+              status.style.display = "none";
+
+              const token = document.getElementById("tokenInput").value.trim();
+              if (!token) {
+                showError("Please paste your download token.");
+                return;
+              }
+
+              const url = DOWNLOAD_BASE + encodeURIComponent(token);
+              try {
+                const resp = await fetch(url, {
+                  method: "GET",
+                });
+
+                if (resp.ok) {
+                  const blob = await resp.blob();
+                  const filename =
+                    getFileNameFromDisposition(resp) || "logs.zip";
+
+                  const link = document.createElement("a");
+                  link.href = URL.createObjectURL(blob);
+                  link.download = filename;
+                  document.body.appendChild(link);
+                  link.click();
+                  link.remove();
+                  return;
+                }
+
+                switch (resp.status) {
+                  case 400:
+                    window.location.href = "invalid-request.html";
+                    break;
+                  case 403:
+                    const et = resp.headers.get("X-Error-Type");
+                    if (et === "expired_link") {
+                      window.location.href = "link-expired.html";
+                    } else if (et === "already_used") {
+                      window.location.href = "max-limit.html";
+                    } else {
+                      window.location.href = "error.html";
+                    }
+                    break;
+                  default:
+                    window.location.href = "error.html";
+                }
+              } catch (err) {
+                console.error("Download error:", err);
+                showError("Network error. Please try again.");
+              }
+            });
+
+            function showError(msg) {
+              status.textContent = msg;
+              status.style.display = "block";
+              status.className =
+                "govuk-notification-banner govuk-notification-banner--error";
+            }
+
+            function getFileNameFromDisposition(response) {
+              const cd = response.headers.get("content-disposition");
+              if (!cd) return null;
+              const match = /filename="(.+)"/.exec(cd);
+              return match ? match[1] : null;
+            }
+          });
+        </script>
+      </main>
+    </div>
