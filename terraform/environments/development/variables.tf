@@ -3,6 +3,12 @@ variable "environment" {
   type        = string
 }
 
+variable "aws_region" {
+  type        = string
+  description = "AWS region for resources"
+  default     = "eu-west-2"
+}
+
 variable "project_name" {
   description = "Project name for resource naming"
   type        = string
