@@ -221,7 +221,7 @@ module "operator_request_portal_static_site" {
   html_files_map = var.html_files_map
 
   # Pass Lambda@Edge ARNs with versions
-  lambda_csr_upload_arn   = module.lambda_edge_csr_upload.lambda_edge_function_arn
+  # lambda_csr_upload_arn   = module.lambda_edge_csr_upload.lambda_edge_function_arn
   lambda_log_upload_arn   = module.lambda_edge_log_upload.log_upload_edge_arn
   lambda_log_download_arn = module.lambda_edge_log_download.download_edge_lambda_arn
 }
