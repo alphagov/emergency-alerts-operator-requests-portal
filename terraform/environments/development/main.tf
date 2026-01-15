@@ -21,6 +21,8 @@ locals {
 
   environment               = var.environment
   project_name              = var.project_name
+  aws_region                = var.aws_region
+
   csr_bucket_name           = "${var.project_name}-csr-${var.environment}"
   log_bucket_name           = "${var.project_name}-logs-${var.environment}"
   static_bucket_name        = "${var.project_name}-static-${var.environment}"
@@ -124,7 +126,7 @@ module "notify_email_communications" {
 # module "lambda_certificate_generation" {
 #   source = "../../modules/operator-request-portal-lambda-functions/cert-mgt-functions/lambda-certificate-generation"
 
-#   aws_region                           = "eu-west-2"
+#   aws_region                           = local.aws_region
 #   environment                          = local.environment
 #   csr_bucket_name                      = local.csr_bucket_name
 #   certificate_domain                   = local.domain_name
@@ -159,7 +161,7 @@ module "lambda_log_upload" {
   notify_lambda_arn          = module.notify_email_communications.notify_lambda_function_arn
   notify_log_template_id     = local.notify_templates.log_upload_invite
   upload_link_expiry_seconds = var.upload_link_expiry_seconds
-  dynamodb_region            = "eu-west-2"
+  dynamodb_region            = local.aws_region
 }
 
 # Lambda@Edge for CSR upload
@@ -181,7 +183,7 @@ module "lambda_edge_log_download" {
 
   environment                 = local.environment
   download_tracking_table     = local.download_tracking_table
-  dynamodb_region             = "eu-west-2"
+  dynamodb_region             = local.aws_region
   cloudfront_distribution_arn = module.operator_request_portal_static_site.cloudfront_distribution_arn
   cloudfront_distribution_id  = module.operator_request_portal_static_site.cloudfront_distribution_id
 
@@ -196,7 +198,7 @@ module "lambda_edge_log_upload" {
 
   environment                = local.environment
   upload_domain              = local.domain_name
-  dynamodb_region            = "eu-west-2"
+  dynamodb_region            = local.aws_region
   cloudfront_distribution_id = module.operator_request_portal_static_site.cloudfront_distribution_id
 
   providers = {
