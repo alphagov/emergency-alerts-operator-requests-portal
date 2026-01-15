@@ -121,20 +121,20 @@ module "notify_email_communications" {
 }
 
 # Certificate generation Lambda
-module "lambda_certificate_generation" {
-  source = "../../modules/operator-request-portal-lambda-functions/cert-mgt-functions/lambda-certificate-generation"
+# module "lambda_certificate_generation" {
+#   source = "../../modules/operator-request-portal-lambda-functions/cert-mgt-functions/lambda-certificate-generation"
 
-  aws_region                           = "eu-west-2"
-  environment                          = local.environment
-  csr_bucket_name                      = local.csr_bucket_name
-  certificate_domain                   = local.domain_name
-  pca_arn                              = local.pca_arn
-  notify_lambda_arn                    = module.notify_email_communications.notify_lambda_function_arn
-  notify_valid_csr_template_id         = local.notify_templates.valid_csr
-  notify_invalid_first_csr_template_id = local.notify_templates.invalid_first_csr
-  notify_invalid_retry_csr_template_id = local.notify_templates.invalid_retry_csr
-  download_notify_lambda_arn           = module.lambda_log_download.notify_on_upload_lambda_arn
-}
+#   aws_region                           = "eu-west-2"
+#   environment                          = local.environment
+#   csr_bucket_name                      = local.csr_bucket_name
+#   certificate_domain                   = local.domain_name
+#   pca_arn                              = local.pca_arn
+#   notify_lambda_arn                    = module.notify_email_communications.notify_lambda_function_arn
+#   notify_valid_csr_template_id         = local.notify_templates.valid_csr
+#   notify_invalid_first_csr_template_id = local.notify_templates.invalid_first_csr
+#   notify_invalid_retry_csr_template_id = local.notify_templates.invalid_retry_csr
+#   download_notify_lambda_arn           = module.lambda_log_download.notify_on_upload_lambda_arn
+# }
 
 # Log download Lambda
 module "lambda_log_download" {
@@ -163,17 +163,17 @@ module "lambda_log_upload" {
 }
 
 # Lambda@Edge for CSR upload
-module "lambda_edge_csr_upload" {
-  source = "../../modules/operator-request-portal-lambda-functions/cert-mgt-functions/lambda@edge-csr-upload"
+# module "lambda_edge_csr_upload" {
+#   source = "../../modules/operator-request-portal-lambda-functions/cert-mgt-functions/lambda@edge-csr-upload"
 
-  environment               = local.environment
-  lambda_edge_function_name = "${local.project_name}-csr-upload-${local.environment}"
-  lambda_edge_zip_file      = "lambda-function.zip"
+#   environment               = local.environment
+#   lambda_edge_function_name = "${local.project_name}-csr-upload-${local.environment}"
+#   lambda_edge_zip_file      = "lambda-function.zip"
 
-  providers = {
-    aws.us_east_1 = aws.us_east_1
-  }
-}
+#   providers = {
+#     aws.us_east_1 = aws.us_east_1
+#   }
+# }
 
 # Lambda@Edge for log download
 module "lambda_edge_log_download" {
