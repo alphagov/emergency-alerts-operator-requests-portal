@@ -1,0 +1,13 @@
+{
+  "name": "static-site",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "gulp"
+  },
+  "dependencies": {
+    "govuk-frontend": "5.13.0",
+    "gulp": "^5.0.1",
+    "gulp-sass": "^6.0.1",
+    "sass": "^1.93.3"
+  }
+}
