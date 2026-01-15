@@ -19,9 +19,9 @@ locals {
   notify_templates         = module.shared.notify_templates
   alerts_team_emails       = module.shared.alerts_team_emails
 
-  environment               = var.environment
-  project_name              = var.project_name
-  aws_region                = var.aws_region
+  environment  = var.environment
+  project_name = var.project_name
+  aws_region   = var.aws_region
 
   csr_bucket_name           = "${var.project_name}-csr-${var.environment}"
   log_bucket_name           = "${var.project_name}-logs-${var.environment}"
