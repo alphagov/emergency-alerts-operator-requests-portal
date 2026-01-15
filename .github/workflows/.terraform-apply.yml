@@ -6,7 +6,7 @@ on:
       environment:
         required: true
         type: string
-        description: "Environment to apply (e.g., development)"
+        description: "Environment to apply (e.g., development )"
       working_directory:
         required: false
         type: string
@@ -36,6 +36,11 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20'
 
       - name: Download Artifact
         uses: actions/download-artifact@v4
