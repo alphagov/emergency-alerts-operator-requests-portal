@@ -95,6 +95,7 @@ jobs:
           cd ../../modules/operator-request-portal-lambda-functions/notify-email-communications/files
           mkdir -p notify_layer_package/python zip
           python3 -m pip install -r notify-layer-requirements.txt -t notify_layer_package/python --upgrade
+          cd notify_layer_package && zip -r ../zip/notify-layer.zip . && cd ..
 
       - name: Terraform Validate
         run: terraform validate
