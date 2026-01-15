@@ -6,7 +6,7 @@ on:
       environment:
         required: true
         type: string
-        description: "Environment to apply (e.g., development)"
+        description: "Environment to apply (e.g., development )"
       working_directory:
         required: false
         type: string
