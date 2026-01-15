@@ -1,0 +1,89 @@
+    <div class="govuk-width-container">
+      <main class="govuk-main-wrapper" id="main-content">
+        <h1 class="govuk-heading-xl">Upload Logs</h1>
+
+        <form id="uploadForm">
+          <div class="govuk-form-group">
+            <label class="govuk-label" for="tokenInput">One-time upload token</label>
+            <input
+              type="text"
+              id="tokenInput"
+              class="govuk-input"
+              placeholder="Paste the token from your email here"
+            >
+          </div>
+          <div class="govuk-form-group">
+            <label class="govuk-label" for="logFile">Select ZIP file</label>
+            <input
+              type="file"
+              id="logFile"
+              class="govuk-file-upload"
+              accept=".zip"
+            >
+          </div>
+          <button type="submit" class="govuk-button">Upload Logs</button>
+        </form>
+
+        <script>
+          const UPLOAD_BASE = 'https://test-site.dev.emergency-alerts.service.gov.uk/received/?data=';
+
+          document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('uploadForm');
+            form.addEventListener('submit', async e => {
+              e.preventDefault();
+
+              const token = document.getElementById('tokenInput').value.trim();
+              const fileEl = document.getElementById('logFile');
+              if (!token || !fileEl.files.length) {
+                return window.location.href = 'invalid-request.html';
+              }
+
+              // first undo any double-encoding, then re-encode safely
+              const cleanToken = decodeURIComponent(token);
+              const uploadUrl  = UPLOAD_BASE + encodeURIComponent(cleanToken);
+
+              try {
+                const resp = await fetch(uploadUrl, {
+                  method: 'PUT',
+                  body: fileEl.files[0],
+                  headers: { 'Content-Type': 'application/zip' }
+                });
+
+                if (resp.ok) {
+                  return window.location.href = 'upload-success.html';
+                }
+
+                switch (resp.status) {
+                  case 400:
+                    window.location.href = 'invalid-request.html';
+                    break;
+
+                  case 403:
+                    const err = resp.headers.get('X-Error-Type');
+                    if (err === 'expired_link') {
+                      window.location.href = 'link-expired.html';
+                    } else if (err === 'already_used') {
+                      window.location.href = 'max-limit.html';
+                    } else if (err === 'method_not_allowed') {
+                      window.location.href = 'method-not-allowed.html';
+                    } else {
+                      window.location.href = 'error.html';
+                    }
+                    break;
+
+                  case 405:
+                    window.location.href = 'method-not-allowed.html';
+                    break;
+
+                  default:
+                    window.location.href = 'error.html';
+                }
+              } catch (err) {
+                console.error('Upload error:', err);
+                window.location.href = 'error.html';
+              }
+            });
+          });
+        </script>
+      </main>
+    </div>
