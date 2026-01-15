@@ -64,6 +64,7 @@ jobs:
           aws_credentials=$(aws sts assume-role \
             --role-arn arn:aws:iam::${{ secrets.account_id }}:role/eas-terraformer \
             --role-session-name "operator-requests-apply-${{ github.run_id }}" \
+            --external-id "eas-mno-portal-${{ inputs.environment }}-terraformer" \
             --output json)
 
           export AWS_ACCESS_KEY_ID=$(echo $aws_credentials | jq '.Credentials.AccessKeyId' | tr -d '"')

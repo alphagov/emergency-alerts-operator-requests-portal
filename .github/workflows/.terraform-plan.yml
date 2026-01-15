@@ -47,6 +47,7 @@ jobs:
           aws_credentials=$(aws sts assume-role \
             --role-arn arn:aws:iam::${{ secrets.account_id }}:role/eas-terraformer \
             --role-session-name "operator-requests-plan-${{ github.run_id }}" \
+            --external-id "eas-mno-portal-${{ inputs.environment }}-terraformer" \
             --output json)
           
           echo "Assume role credentials retrieved successfully"
