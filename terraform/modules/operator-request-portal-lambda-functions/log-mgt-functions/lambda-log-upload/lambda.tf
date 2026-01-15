@@ -15,7 +15,7 @@ resource "aws_lambda_function" "log_upload" {
 
   environment {
     variables = {
-      LOG_BUCKET_NAME            = local.default_log_bucket_name
+      LOG_BUCKET_NAME            = var.log_bucket_name
       UPLOAD_DOMAIN              = local.default_upload_domain
       NOTIFY_LAMBDA_ARN          = var.notify_lambda_arn
       NOTIFY_LOG_TEMPLATE_ID     = var.notify_log_template_id
