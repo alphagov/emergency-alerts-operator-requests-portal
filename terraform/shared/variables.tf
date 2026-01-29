@@ -46,3 +46,13 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "notify_api_key_parameter_name" {
+  description = "SSM Parameter name for Notify API key"
+  type        = string
+}
+
+variable "notify_api_key_parameter_arn" {
+  description = "SSM Parameter ARN for Notify API key"
+  type        = string
+}

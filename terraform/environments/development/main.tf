@@ -9,6 +9,9 @@ module "shared" {
   download_link_expiry_days  = var.download_link_expiry_days
   upload_link_expiry_seconds = var.upload_link_expiry_seconds
   tags                       = var.tags
+
+  notify_api_key_parameter_name = aws_ssm_parameter.notify_api_key.name
+  notify_api_key_parameter_arn  = aws_ssm_parameter.notify_api_key.arn
 }
 
 locals {
