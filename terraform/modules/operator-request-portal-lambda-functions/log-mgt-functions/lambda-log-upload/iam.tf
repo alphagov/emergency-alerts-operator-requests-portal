@@ -69,3 +69,10 @@ resource "aws_iam_role_policy" "log_upload_policy" {
     ]
   })
 }
+
+resource "aws_lambda_permission" "allow_eas_api_invoke" {
+  statement_id  = "AllowEASAPIInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_log_upload.function_name
+  principal     = "arn:aws:iam::${var.eas_preview_account_id}:role/eas-app-api-task-role"
+}
