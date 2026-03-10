@@ -6,6 +6,7 @@ on:
       environment:
         required: true
         type: string
+        description: "Environment to plan (e.g., development)"
       working_directory:
         required: false
         type: string
@@ -14,7 +15,7 @@ on:
         required: false
         type: string
         default: ""
-
+    
     secrets:
       account_id:
         required: true
@@ -27,23 +28,15 @@ jobs:
     defaults:
       run:
         working-directory: ${{ inputs.working_directory }}
-
+    
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Read Terraform version
-        id: tf_version
-        shell: bash
-        run: echo "version=$(cat $GITHUB_WORKSPACE/.terraform-version)" >> "$GITHUB_OUTPUT"
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ steps.tf_version.outputs.version }}
-
-      - name: Show Terraform version
-        run: terraform version
+          terraform_version_file: .terraform-version
 
       - name: Setup Node
         uses: actions/setup-node@v2
