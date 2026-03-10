@@ -29,7 +29,7 @@ resource "aws_iam_role_policy" "edge_policy" {
           "dynamodb:GetItem",
           "dynamodb:UpdateItem"
         ],
-        Resource = "arn:aws:dynamodb:${var.dynamodb_region}:*:table/${var.download_tracking_table}"
+        Resource = "arn:aws:dynamodb:${var.dynamodb_region}:${data.aws_caller_identity.current.account_id}:table/${var.download_tracking_table}"
       },
 
       {

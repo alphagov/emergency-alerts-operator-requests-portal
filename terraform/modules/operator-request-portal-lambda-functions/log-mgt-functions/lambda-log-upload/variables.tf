@@ -34,3 +34,9 @@ variable "dynamodb_region" {
   type        = string
   default     = "eu-west-2"
 }
+
+variable "eas_preview_account_id" {
+  type        = string
+  description = "EAS Preview account ID for cross-account Lambda invocation"
+  default     = "644514520413"
+}

@@ -25,7 +25,7 @@ lambda_cli = boto3.client("lambda")
 s3 = boto3.client("s3")
 
 # Regex to extract alert/mno from key
-KEY_RE = re.compile(r"^received/logs/(?P<alert>[^/]+)/CBC_(?P=alert)_(?P<mno>[A-Z]+[0-9]+)\.zip$")
+KEY_RE = re.compile(r"^received/logs/(?P<alert>[^/]+)/CBC_(?P=alert)_(?P<mno>[^.]+)\.zip$")
 
 
 def get_original_alert_ref(safe_alert: str) -> str:
@@ -35,7 +35,7 @@ def get_original_alert_ref(safe_alert: str) -> str:
     """
     try:
         # Try to get metadata from the folder object
-        folder_key = f"logs/{safe_alert}/"
+        folder_key = f"received/logs/{safe_alert}/"
         response = s3.head_object(Bucket=LOG_BUCKET, Key=folder_key)
         metadata = response.get('Metadata', {})
         original_ref = metadata.get('original-alert-ref')
@@ -86,6 +86,8 @@ def generate_download_link(alert: str, mno: str) -> str:
 def send_notification(safe_alert: str, mno: str, download_link: str):
     original_alert = get_original_alert_ref(safe_alert)
 
+    full_download_url = f"https://{DOWNLOAD_DOMAIN}/download/logs/{safe_alert}/CBC_{safe_alert}_{mno}.zip?data={download_link}"
+
     for email in recipients:
         payload = {
             "email_address": email,
@@ -94,7 +96,7 @@ def send_notification(safe_alert: str, mno: str, download_link: str):
                 "broadcastRef": original_alert,
                 "MNO": mno,
                 "downloadSite": f"https://{DOWNLOAD_DOMAIN}/download.html",
-                "downloadLink": download_link
+                "downloadLink": full_download_url  # Now it's a full URL
             }
         }
         lambda_cli.invoke(

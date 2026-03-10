@@ -9,7 +9,7 @@
               type="text"
               id="tokenInput"
               class="govuk-input"
-              placeholder="Paste the token from your email here"
+              placeholder="Paste your single use upload token here"
             >
           </div>
           <div class="govuk-form-group">
@@ -25,7 +25,7 @@
         </form>
 
         <script>
-          const UPLOAD_BASE = 'https://test-site.dev.emergency-alerts.service.gov.uk/received/?data=';
+          const UPLOAD_BASE = 'https://operator-requests.dev.emergency-alerts.service.gov.uk/received/?data=';
 
           document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('uploadForm');

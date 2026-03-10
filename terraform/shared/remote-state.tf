@@ -20,8 +20,8 @@ locals {
   hosted_zone_id = data.terraform_remote_state.infra_mgt.outputs.operator_portal_hosted_zone_id
   domain_name    = data.terraform_remote_state.infra_mgt.outputs.operator_portal_domain_name
 
-  notify_api_key_parameter_name = data.terraform_remote_state.infra_mgt.outputs.notify_api_key_parameter_name
-  notify_api_key_parameter_arn  = data.terraform_remote_state.infra_mgt.outputs.notify_api_key_parameter_arn
+  notify_api_key_parameter_name = var.notify_api_key_parameter_name
+  notify_api_key_parameter_arn  = var.notify_api_key_parameter_arn
 
   pca_arn = data.terraform_remote_state.infra_mgt.outputs.pca_arn
 
