@@ -1,0 +1,95 @@
+version: 0.2
+env:
+  variables:
+    testsuites: >-
+      log-upload-request-flow
+      log-upload-link-works
+      log-upload-link-single-use
+
+    AWS_REGION: eu-west-2
+
+    LOG_UPLOAD_TRACKING_TABLE: operator-request-portal-log-uploads
+    LOG_INVITE_TRACKING_TABLE: operator-request-portal-log-invites
+
+  parameter-store:
+    NOTIFY_SERVICE_API_KEY: /operator-portal/functional-tests/notify-api-key
+    TEST_MNO_EMAIL: /operator-portal/functional-tests/test-mno-email
+
+    MNO_PORTAL_ACCOUNT_ID: /operator-portal/functional-tests/account-id
+    ENVIRONMENT: /operator-portal/functional-tests/environment
+    TEST_MNO_ID: /operator-portal/functional-tests/test-mno-id
+    LOG_UPLOAD_LAMBDA_NAME: /operator-portal/functional-tests/log-upload-lambda-name
+    LOG_BUCKET_NAME: /operator-portal/functional-tests/log-bucket-name
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+
+  pre_build:
+    commands:
+      - cd $CODEBUILD_SRC_DIR
+      - VENV=/venv/mno-portal-tests
+      - python3.12 -m venv $VENV
+      - . $VENV/bin/activate
+      - python3.12 -m pip install --upgrade pip wheel setuptools
+      - make bootstrap
+
+      - |
+        echo "Assuming role into MNO portal account ${MNO_PORTAL_ACCOUNT_ID}"
+        aws_credentials=$(aws sts assume-role \
+          --role-arn "arn:aws:iam::${MNO_PORTAL_ACCOUNT_ID}:role/eas-terraformer" \
+          --role-session-name "mno-portal-functional-tests-${CODEBUILD_BUILD_ID}" \
+          --external-id "eas-mno-portal-${ENVIRONMENT}-terraformer" \
+          --output json)
+
+        export AWS_ACCESS_KEY_ID=$(echo $aws_credentials | jq -r '.Credentials.AccessKeyId')
+        export AWS_SECRET_ACCESS_KEY=$(echo $aws_credentials | jq -r '.Credentials.SecretAccessKey')
+        export AWS_SESSION_TOKEN=$(echo $aws_credentials | jq -r '.Credentials.SessionToken')
+
+        if [[ -z "$AWS_ACCESS_KEY_ID" || "$AWS_ACCESS_KEY_ID" == "null" ]]; then
+          echo "ERROR: failed to retrieve assumed-role credentials"
+          exit 1
+        fi
+
+        echo "::add-mask::$AWS_ACCESS_KEY_ID"
+        echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
+        echo "::add-mask::$AWS_SESSION_TOKEN"
+
+        # Persist credentials for subsequent build phases
+        echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"         >> $CODEBUILD_ENV_FILE
+        echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $CODEBUILD_ENV_FILE
+        echo "AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN"         >> $CODEBUILD_ENV_FILE
+
+  build:
+    on-failure: CONTINUE
+    commands:
+      - make test-log-upload-request; exit 0
+      - make test-log-upload-link; exit 0
+      - make test-log-upload-single-use; exit 0
+
+      - echo "Test run completed."
+      - python3.12 ./scripts/report-test-results.py functional-test-reports
+
+  post_build:
+    commands:
+      - |
+        for file in functional-test-reports/*; do
+          if [[ "$file" != *.xml ]]; then
+            cp "$file" "${file}.xml"
+          fi
+        done
+
+      - python3.12 ./scripts/signal-build-pass-or-fail.py $(pwd) $testsuites
+
+artifacts:
+  files:
+    - functional-test-reports/*
+
+reports:
+  mno-portal-functional-test-reports:
+    files:
+      - "*.xml"
+    base-directory: functional-test-reports
+    discard-paths: yes
+    file-format: JUNITXML
