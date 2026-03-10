@@ -29,9 +29,9 @@ locals {
   csr_bucket_name           = "${var.project_name}-csr-${var.environment}"
   log_bucket_name           = "${var.project_name}-logs-${var.environment}"
   static_bucket_name        = "${var.project_name}-static-${var.environment}"
-  download_tracking_table   = "${var.project_name}-download-tracking-${var.environment}"
+  download_tracking_table   = "${var.project_name}-download-tracking"
   log_invite_tracking_table = "${var.project_name}-log-invite-tracking-${var.environment}"
-  log_upload_tracking_table = "${var.project_name}-log-upload-tracking-${var.environment}"
+  log_upload_tracking_table = "${var.project_name}-log-uploads"
   csr_uploads_table         = "${var.project_name}-csr-uploads-${var.environment}"
   certificates_table        = "${var.project_name}-certificates-${var.environment}"
   mno_config_table          = "${var.project_name}-mno-config-${var.environment}"
@@ -150,7 +150,7 @@ module "lambda_log_download" {
   download_domain           = local.domain_name
   notify_lambda_arn         = module.notify_email_communications.notify_lambda_function_arn
   notify_template_id        = local.notify_templates.log_download
-  alerts_team_emails        = local.alerts_team_emails
+  alerts_team_emails        = "alec.ashmore@digital.cabinet-office.gov.uk"
   download_link_expiry_days = var.download_link_expiry_days
 }
 

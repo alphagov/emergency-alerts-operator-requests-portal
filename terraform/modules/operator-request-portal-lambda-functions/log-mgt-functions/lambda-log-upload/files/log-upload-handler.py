@@ -128,8 +128,18 @@ def send_invite(email: str, upload_url: str, alert_ref: str, mno_id: str):
         token = upload_url.split("?data=", 1)[1]
     except IndexError:
         token = upload_url
+    
+    # Decode the URL-encoded token for the oneTimeToken field
+    decoded_token = urllib.parse.unquote(token)
 
     upload_site = f"https://{UPLOAD_DOMAIN}/upload-logs.html"
+    
+    # Generate the safe alert name for the upload path
+    safe_alert = re.sub(r'[^A-Za-z0-9]+', '_', alert_ref).strip('_')
+    
+    # Create the direct upload URL (for automatic upload)
+    one_time_link = f"https://{UPLOAD_DOMAIN}/received/logs/{safe_alert}/CBC_{safe_alert}_{mno_id}.zip?data={token}"
+    
     payload = {
         "email_address": email,
         "template_id": NOTIFY_TEMPLATE_ID,
@@ -137,7 +147,8 @@ def send_invite(email: str, upload_url: str, alert_ref: str, mno_id: str):
             "broadcastRef": alert_ref,
             "MNO": mno_id,
             "uploadSite": upload_site,
-            "oneTimeLink": token
+            "oneTimeToken": decoded_token,
+            "oneTimeLink": one_time_link
         }
     }
     try:

@@ -70,9 +70,16 @@ resource "aws_iam_role_policy" "log_upload_policy" {
   })
 }
 
-resource "aws_lambda_permission" "allow_eas_api_invoke" {
+# resource "aws_lambda_permission" "allow_eas_api_invoke" {
+#   statement_id  = "AllowEASAPIInvoke"
+#   action        = "lambda:InvokeFunction"
+#   function_name = aws_lambda_function.log_upload.function_name
+#   principal     = "arn:aws:iam::${var.eas_preview_account_id}:role/eas-app-api-task-role"
+# }
+
+resource "aws_lambda_permission" "allow_eas_api_invoke_development" {
   statement_id  = "AllowEASAPIInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.log_upload.function_name
-  principal     = "arn:aws:iam::${var.eas_preview_account_id}:role/eas-app-api-task-role"
+  principal     = "071839617283"
 }

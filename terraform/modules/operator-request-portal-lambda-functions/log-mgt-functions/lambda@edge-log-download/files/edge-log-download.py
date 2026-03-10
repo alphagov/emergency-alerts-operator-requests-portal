@@ -10,7 +10,7 @@ import boto3
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-TRACK_TABLE = "dev-log-download-tracking"
+TRACK_TABLE = "operator-request-portal-download-tracking"
 
 ddb = boto3.client(
     "dynamodb",
