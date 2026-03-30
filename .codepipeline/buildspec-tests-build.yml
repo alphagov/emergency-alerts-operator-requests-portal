@@ -1,6 +1,7 @@
 version: 0.2
 env:
   variables:
+    ENVIRONMENT: development
     testsuites: >-
       log-upload-request-flow
       log-upload-link-works
@@ -16,7 +17,6 @@ env:
     TEST_MNO_EMAIL: /operator-portal/functional-tests/test-mno-email
 
     MNO_PORTAL_ACCOUNT_ID: /operator-portal/functional-tests/account-id
-    ENVIRONMENT: /operator-portal/functional-tests/environment
     TEST_MNO_ID: /operator-portal/functional-tests/test-mno-id
     LOG_UPLOAD_LAMBDA_NAME: /operator-portal/functional-tests/log-upload-lambda-name
     LOG_BUCKET_NAME: /operator-portal/functional-tests/log-bucket-name
