@@ -41,7 +41,8 @@ phases:
           --role-arn "arn:aws:iam::${MNO_PORTAL_ACCOUNT_ID}:role/eas-terraformer" \
           --role-session-name "mno-portal-functional-tests-${CODEBUILD_BUILD_ID}" \
           --external-id "eas-mno-portal-${ENVIRONMENT}-terraformer" \
-          --output json)
+          --output json 2>&1) || true
+        echo "STS response: $aws_credentials"
 
         export AWS_ACCESS_KEY_ID=$(echo $aws_credentials | jq -r '.Credentials.AccessKeyId')
         export AWS_SECRET_ACCESS_KEY=$(echo $aws_credentials | jq -r '.Credentials.SecretAccessKey')
