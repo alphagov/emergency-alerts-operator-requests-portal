@@ -79,7 +79,7 @@ def test_log_upload_request_flow(
     portal_host = config["portal_url"].removeprefix("https://")
     notification = poll_notify_for_email(
         mno_email=mno_email,
-        expected_subject_fragment="log",
+        expected_subject_fragment="CBC activity logs",
         retries=config["verify_code_retry_times"] * 4,
         interval=config["verify_code_retry_interval"] * 3,
     )
