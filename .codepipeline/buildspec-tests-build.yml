@@ -36,6 +36,7 @@ phases:
       - make bootstrap
 
       - |
+        ENV_FILE=/tmp/codebuild_env_export
         echo "Assuming role into MNO portal account ${MNO_PORTAL_ACCOUNT_ID}"
         SESSION_NAME="mno-portal-tests-$(echo $CODEBUILD_BUILD_ID | cut -c1-32)"
         aws_credentials=$(aws sts assume-role \
@@ -62,14 +63,14 @@ phases:
         export AWS_SECRET_ACCESS_KEY
         export AWS_SESSION_TOKEN
 
-        # Persist credentials for subsequent build phases
-        echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"         >> $CODEBUILD_ENV_FILE
-        echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $CODEBUILD_ENV_FILE
-        echo "AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN"         >> $CODEBUILD_ENV_FILE
+        echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"         >> $ENV_FILE
+        echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $ENV_FILE
+        echo "AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN"         >> $ENV_FILE
 
   build:
     on-failure: CONTINUE
     commands:
+      - . /tmp/codebuild_env_export
       - . $VENV/bin/activate
       - make test-log-upload-request; exit 0
       - make test-log-upload-link; exit 0
