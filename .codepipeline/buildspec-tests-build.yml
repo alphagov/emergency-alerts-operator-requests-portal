@@ -37,25 +37,30 @@ phases:
 
       - |
         echo "Assuming role into MNO portal account ${MNO_PORTAL_ACCOUNT_ID}"
+        SESSION_NAME="mno-portal-tests-$(echo $CODEBUILD_BUILD_ID | cut -c1-32)"
         aws_credentials=$(aws sts assume-role \
           --role-arn "arn:aws:iam::${MNO_PORTAL_ACCOUNT_ID}:role/eas-terraformer" \
-          --role-session-name "mno-portal-functional-tests-${CODEBUILD_BUILD_ID}" \
+          --role-session-name "$SESSION_NAME" \
           --external-id "eas-mno-portal-${ENVIRONMENT}-terraformer" \
-          --output json 2>&1) || true
-        echo "STS response: $aws_credentials"
+          --output json)
 
-        export AWS_ACCESS_KEY_ID=$(echo $aws_credentials | jq -r '.Credentials.AccessKeyId')
-        export AWS_SECRET_ACCESS_KEY=$(echo $aws_credentials | jq -r '.Credentials.SecretAccessKey')
-        export AWS_SESSION_TOKEN=$(echo $aws_credentials | jq -r '.Credentials.SessionToken')
+        if [ $? -ne 0 ]; then
+          echo "ERROR: sts assume-role failed"
+          exit 1
+        fi
 
-        if [[ -z "$AWS_ACCESS_KEY_ID" || "$AWS_ACCESS_KEY_ID" == "null" ]]; then
+        AWS_ACCESS_KEY_ID=$(echo $aws_credentials | jq -r '.Credentials.AccessKeyId')
+        AWS_SECRET_ACCESS_KEY=$(echo $aws_credentials | jq -r '.Credentials.SecretAccessKey')
+        AWS_SESSION_TOKEN=$(echo $aws_credentials | jq -r '.Credentials.SessionToken')
+
+        if [ -z "$AWS_ACCESS_KEY_ID" ] || [ "$AWS_ACCESS_KEY_ID" = "null" ]; then
           echo "ERROR: failed to retrieve assumed-role credentials"
           exit 1
         fi
 
-        echo "::add-mask::$AWS_ACCESS_KEY_ID"
-        echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
-        echo "::add-mask::$AWS_SESSION_TOKEN"
+        export AWS_ACCESS_KEY_ID
+        export AWS_SECRET_ACCESS_KEY
+        export AWS_SESSION_TOKEN
 
         # Persist credentials for subsequent build phases
         echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"         >> $CODEBUILD_ENV_FILE
@@ -65,6 +70,7 @@ phases:
   build:
     on-failure: CONTINUE
     commands:
+      - . $VENV/bin/activate
       - make test-log-upload-request; exit 0
       - make test-log-upload-link; exit 0
       - make test-log-upload-single-use; exit 0
@@ -76,7 +82,7 @@ phases:
     commands:
       - |
         for file in functional-test-reports/*; do
-          if [[ "$file" != *.xml ]]; then
+          if [ "$file" != "${file%.xml}" ]; then
             cp "$file" "${file}.xml"
           fi
         done
