@@ -115,6 +115,7 @@ def delete_s3_object(key: str):
 def poll_notify_for_email(
     mno_email: str,
     expected_subject_fragment: str,
+    alert_reference: str = "",
     retries: int = 20,
     interval: int = 3,
 ) -> dict:
@@ -133,14 +134,18 @@ def poll_notify_for_email(
             if notification.get("email_address") != mno_email:
                 continue
             subject = notification.get("subject", "") or ""
-            if expected_subject_fragment.lower() in subject.lower():
-                logger.info("Found matching notification: %s", notification.get("id"))
-                return notification
+            if expected_subject_fragment.lower() not in subject.lower():
+                continue
+            if alert_reference and alert_reference not in subject:
+                continue
+            logger.info("Found matching notification: %s", notification.get("id"))
+            return notification
 
         if attempt < retries:
             time.sleep(interval)
 
     raise AssertionError(
         f"No email with subject containing '{expected_subject_fragment}' "
+        f"for alert '{alert_reference}' "
         f"delivered to {mno_email} after {retries * interval}s"
     )

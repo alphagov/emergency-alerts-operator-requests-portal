@@ -80,6 +80,7 @@ def test_log_upload_request_flow(
     notification = poll_notify_for_email(
         mno_email=mno_email,
         expected_subject_fragment="CBC activity logs",
+        alert_reference=test_alert_reference,
         retries=config["verify_code_retry_times"] * 4,
         interval=config["verify_code_retry_interval"] * 3,
     )
