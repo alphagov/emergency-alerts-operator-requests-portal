@@ -45,7 +45,7 @@ resource "aws_ssm_parameter" "functional_test_log_bucket_name" {
   name        = "/operator-portal/functional-tests/log-bucket-name"
   description = "Name of the S3 bucket the functional tests assert log files land in"
   type        = "String"
-  value       = "operator-request-portal-logs-${var.environment}"
+  value       = "operator-request-portal-${var.environment}"
 
   tags = var.tags
 }

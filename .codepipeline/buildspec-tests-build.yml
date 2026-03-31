@@ -3,9 +3,7 @@ env:
   variables:
     ENVIRONMENT: development
     testsuites: >-
-      log-upload-request-flow
-      log-upload-link-works
-      log-upload-link-single-use
+      log-upload-full-flow
 
     AWS_REGION: eu-west-2
 
@@ -72,10 +70,7 @@ phases:
     commands:
       - . /tmp/codebuild_env_export
       - . $VENV/bin/activate
-      - make test-log-upload-request; exit 0
-      - make test-log-upload-link; exit 0
-      - make test-log-upload-single-use; exit 0
-
+      - make test-log-upload; exit 0
       - echo "Test run completed."
       - python3.12 ./scripts/report-test-results.py functional-test-reports
 

@@ -16,20 +16,10 @@ lint:
 	flake8 .
 	black --check .
 
-.PHONY: test-log-upload-request
-test-log-upload-request: # Test (1): trigger upload request flow and verify invite email is received
+.PHONY: test-log-upload
+test-log-upload: ## Run all log upload functional tests in a single session
 	pytest -v \
 	tests/functional/test_log_upload_request_flow.py \
-	--junitxml=functional-test-reports/log-upload-request-flow
-
-.PHONY: test-log-upload-link
-test-log-upload-link: # Test (2): follow upload link and verify file lands in S3
-	pytest -v \
 	tests/functional/test_log_upload_link_works.py \
-	--junitxml=functional-test-reports/log-upload-link-works
-
-.PHONY: test-log-upload-single-use
-test-log-upload-single-use: # Test (3): verify upload link cannot be reused
-	pytest -v \
 	tests/functional/test_log_upload_link_single_use.py \
-	--junitxml=functional-test-reports/log-upload-link-single-use
+	--junitxml=functional-test-reports/log-upload-full-flow
