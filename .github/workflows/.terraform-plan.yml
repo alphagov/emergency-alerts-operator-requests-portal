@@ -33,6 +33,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version_file: .terraform-version
+
       - name: Setup Node
         uses: actions/setup-node@v2
         with:
