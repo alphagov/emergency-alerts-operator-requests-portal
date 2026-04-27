@@ -40,3 +40,9 @@ variable "eas_preview_account_id" {
   description = "EAS Preview account ID for cross-account Lambda invocation"
   default     = "644514520413"
 }
+
+variable "mno_email_ssm_prefix" {
+  description = "SSM Parameter Store prefix for MNO contact email addresses"
+  type        = string
+  default     = "/operator-portal/mno-emails"
+}

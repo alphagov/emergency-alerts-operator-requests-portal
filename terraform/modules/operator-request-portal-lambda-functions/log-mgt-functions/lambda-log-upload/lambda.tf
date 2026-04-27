@@ -22,6 +22,7 @@ resource "aws_lambda_function" "log_upload" {
       UPLOAD_LINK_EXPIRY_SECONDS = tostring(var.upload_link_expiry_seconds)
       LOG_INVITE_TRACKING_TABLE  = aws_dynamodb_table.log_invite_tracking.name
       LOG_UPLOAD_TRACKING_TABLE  = aws_dynamodb_table.log_upload_tracking.name
+      MNO_EMAIL_SSM_PREFIX       = var.mno_email_ssm_prefix
     }
   }
 

@@ -86,3 +86,59 @@ resource "aws_ssm_parameter" "functional_test_mno_email" {
 
   tags = var.tags
 }
+
+resource "aws_ssm_parameter" "mno_email_vodafone" {
+  name        = "/operator-portal/mno-emails/vodafone"
+  description = "Email address for Vodafone MNO operator"
+  type        = "SecureString"
+  key_id      = "alias/aws/ssm"
+  value       = "dummy"
+
+  lifecycle {
+    ignore_changes = all
+  }
+
+  tags = var.tags
+}
+
+resource "aws_ssm_parameter" "mno_email_o2" {
+  name        = "/operator-portal/mno-emails/o2"
+  description = "Email address for O2 MNO operator"
+  type        = "SecureString"
+  key_id      = "alias/aws/ssm"
+  value       = "dummy"
+
+  lifecycle {
+    ignore_changes = all
+  }
+
+  tags = var.tags
+}
+
+resource "aws_ssm_parameter" "mno_email_bt" {
+  name        = "/operator-portal/mno-emails/bt"
+  description = "Email address for BT MNO operator"
+  type        = "SecureString"
+  key_id      = "alias/aws/ssm"
+  value       = "dummy"
+
+  lifecycle {
+    ignore_changes = all
+  }
+
+  tags = var.tags
+}
+
+resource "aws_ssm_parameter" "mno_email_ee" {
+  name        = "/operator-portal/mno-emails/ee"
+  description = "Email address for EE MNO operator"
+  type        = "SecureString"
+  key_id      = "alias/aws/ssm"
+  value       = "dummy"
+
+  lifecycle {
+    ignore_changes = all
+  }
+
+  tags = var.tags
+}
