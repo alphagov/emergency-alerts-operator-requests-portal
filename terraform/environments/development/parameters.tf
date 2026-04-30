@@ -115,9 +115,9 @@ resource "aws_ssm_parameter" "mno_email_o2" {
   tags = var.tags
 }
 
-resource "aws_ssm_parameter" "mno_email_bt" {
-  name        = "/operator-portal/mno-emails/bt"
-  description = "Email address for BT MNO operator"
+resource "aws_ssm_parameter" "mno_email_three" {
+  name        = "/operator-portal/mno-emails/three"
+  description = "Email address for three MNO operator"
   type        = "SecureString"
   key_id      = "alias/aws/ssm"
   value       = "dummy"
