@@ -1,7 +1,5 @@
 """
-Functional test: end-to-end log upload flow.
-
-Covers the full lifecycle:
+Rather than individual tests - this is an amalgamation of the workflow inside of one test to keep it ATOMIC
   1. Invoke the log-upload-handler Lambda and confirm the invite is created.
   2. Verify the invite tracking record in DynamoDB.
   3. Poll Notify for the invite email and extract the one-time upload URL.
