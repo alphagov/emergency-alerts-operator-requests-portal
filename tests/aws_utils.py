@@ -9,12 +9,13 @@ from config import config
 logger = logging.getLogger(__name__)
 
 
-def invoke_log_upload_lambda(alert_reference: str, mno_id: str, mno_email: str) -> dict:
+def invoke_log_upload_lambda(alert_reference: str, mno_id: str) -> dict:
     """
     Synchronously invoke the log-upload-handler Lambda to trigger the upload
     invite flow for a single MNO.
 
-    Returns the parsed Lambda response body on success, or raises on failure.
+    The Lambda fetches MNO contact emails from SSM Parameter Store,
+    so only mno_id is required.
     """
     client = boto3.client("lambda", region_name=config["aws_region"])
 
@@ -26,7 +27,6 @@ def invoke_log_upload_lambda(alert_reference: str, mno_id: str, mno_email: str) 
         "mnos": [
             {
                 "mno_id": mno_id,
-                "emails": [mno_email],
             }
         ],
     }

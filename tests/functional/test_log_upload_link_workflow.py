@@ -89,7 +89,6 @@ def test_log_upload_end_to_end(
     response = invoke_log_upload_lambda(
         alert_reference=test_alert_reference,
         mno_id=mno_id,
-        mno_email=mno_email,
     )
 
     assert response.get("statusCode") == 200, (
