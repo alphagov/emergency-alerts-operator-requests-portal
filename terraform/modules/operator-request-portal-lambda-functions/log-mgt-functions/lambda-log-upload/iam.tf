@@ -1,3 +1,7 @@
+data "aws_region" "current" {}
+
+data "aws_caller_identity" "current" {}
+
 data "aws_iam_policy_document" "assume_lambda" {
   statement {
     effect  = "Allow"
@@ -65,6 +69,14 @@ resource "aws_iam_role_policy" "log_upload_policy" {
         Effect   = "Allow"
         Action   = ["lambda:InvokeFunction"]
         Resource = var.notify_lambda_arn
+      },
+
+      {
+        Effect = "Allow"
+        Action = ["ssm:GetParameter"]
+        Resource = [
+          "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/operator-portal/mno-emails/*"
+        ]
       }
     ]
   })

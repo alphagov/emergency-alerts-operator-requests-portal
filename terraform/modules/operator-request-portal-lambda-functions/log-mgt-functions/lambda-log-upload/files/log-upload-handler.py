@@ -18,8 +18,25 @@ NOTIFY_TEMPLATE_ID = os.environ["NOTIFY_LOG_TEMPLATE_ID"]
 LOG_INVITE_TRACKING_TABLE = os.environ["LOG_INVITE_TRACKING_TABLE"]
 LOG_UPLOAD_TRACKING_TABLE = os.environ["LOG_UPLOAD_TRACKING_TABLE"]
 EXPIRY_SECONDS = int(os.environ.get("UPLOAD_LINK_EXPIRY_SECONDS", "604800"))
+MNO_EMAIL_SSM_PREFIX = os.environ.get("MNO_EMAIL_SSM_PREFIX", "/operator-portal/mno-emails")
 
 ddb = boto3.client("dynamodb")
+ssm = boto3.client("ssm")
+
+
+def _get_mno_emails(mno_id: str) -> list[str]:
+    """Fetch MNO contact emails from Parameter Store."""
+    param_name = f"{MNO_EMAIL_SSM_PREFIX}/{mno_id.lower()}"
+    try:
+        resp = ssm.get_parameter(Name=param_name, WithDecryption=True)
+        raw = resp["Parameter"]["Value"]
+        return [e.strip() for e in raw.split(",") if e.strip()]
+    except ssm.exceptions.ParameterNotFound:
+        logger.warning(f"No SSM parameter found at {param_name}")
+        return []
+    except Exception as e:
+        logger.error(f"Error fetching SSM parameter {param_name}: {e}")
+        return []
 
 
 def already_invited(alert_ref: str) -> bool:
@@ -110,7 +127,6 @@ def prepare_folder(alert_ref: str):
         safe_alert = re.sub(r'[^A-Za-z0-9]+', '_', alert_ref).strip('_')
         prefix = f"logs/{safe_alert}/"
 
-        # Store original alert reference in the folder metadata
         s3.put_object(
             Bucket=LOG_BUCKET,
             Key=prefix,
@@ -128,18 +144,15 @@ def send_invite(email: str, upload_url: str, alert_ref: str, mno_id: str):
         token = upload_url.split("?data=", 1)[1]
     except IndexError:
         token = upload_url
-    
-    # Decode the URL-encoded token for the oneTimeToken field
+
     decoded_token = urllib.parse.unquote(token)
 
     upload_site = f"https://{UPLOAD_DOMAIN}/upload-logs.html"
-    
-    # Generate the safe alert name for the upload path
+
     safe_alert = re.sub(r'[^A-Za-z0-9]+', '_', alert_ref).strip('_')
-    
-    # Create the direct upload URL (for automatic upload)
+
     one_time_link = f"https://{UPLOAD_DOMAIN}/received/logs/{safe_alert}/CBC_{safe_alert}_{mno_id}.zip?data={token}"
-    
+
     payload = {
         "email_address": email,
         "template_id": NOTIFY_TEMPLATE_ID,
@@ -172,8 +185,8 @@ def lambda_handler(event, context):
       "broadcast_start": "2025-05-12T09:00:00Z",
       "broadcast_end":   "2025-05-12T09:15:00Z",
       "mnos": [
-        { "mno_id": "MNO001", "emails": ["examplar1@digital.cabinet-office.gov.uk"] },
-        { "mno_id": "MNO002", "emails": ["examplar2@digital.cabinet-office.gov.uk"] }
+        { "mno_id": "EE" },
+        { "mno_id": "VODAFONE" }
       ]
     }
     """
@@ -195,10 +208,16 @@ def lambda_handler(event, context):
     links_generated = []
     for mno in event.get("mnos", []):
         mno_id = mno["mno_id"]
+        emails = _get_mno_emails(mno_id)
+
+        if not emails:
+            logger.warning(f"No emails found for MNO {mno_id}, skipping")
+            continue
+
         link = generate_upload_link(alert_ref, mno_id)
         links_generated.append({"mno_id": mno_id})
 
-        for email in mno.get("emails", []):
+        for email in emails:
             send_invite(email, link, alert_ref, mno_id)
 
     mark_invited(alert_ref)

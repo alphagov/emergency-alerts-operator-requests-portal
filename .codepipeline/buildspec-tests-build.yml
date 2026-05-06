@@ -1,0 +1,98 @@
+version: 0.2
+env:
+  variables:
+    ENVIRONMENT: development
+    testsuites: >-
+      log-upload-full-flow
+
+    AWS_REGION: eu-west-2
+
+    LOG_UPLOAD_TRACKING_TABLE: operator-request-portal-log-uploads
+    LOG_INVITE_TRACKING_TABLE: operator-request-portal-log-invites
+
+  parameter-store:
+    NOTIFY_SERVICE_API_KEY: /operator-portal/functional-tests/notify-api-key
+    TEST_MNO_EMAIL: /operator-portal/functional-tests/test-mno-email
+
+    MNO_PORTAL_ACCOUNT_ID: /operator-portal/functional-tests/account-id
+    TEST_MNO_ID: /operator-portal/functional-tests/test-mno-id
+    LOG_UPLOAD_LAMBDA_NAME: /operator-portal/functional-tests/log-upload-lambda-name
+    LOG_BUCKET_NAME: /operator-portal/functional-tests/log-bucket-name
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+
+  pre_build:
+    commands:
+      - cd $CODEBUILD_SRC_DIR
+      - VENV=/venv/mno-portal-tests
+      - python3.12 -m venv $VENV
+      - . $VENV/bin/activate
+      - python3.12 -m pip install --upgrade pip wheel setuptools
+      - make bootstrap
+
+      - |
+        ENV_FILE=/tmp/codebuild_env_export
+        echo "Assuming role into MNO portal account ${MNO_PORTAL_ACCOUNT_ID}"
+        SESSION_NAME="mno-portal-tests-$(echo $CODEBUILD_BUILD_ID | cut -c1-32)"
+        aws_credentials=$(aws sts assume-role \
+          --role-arn "arn:aws:iam::${MNO_PORTAL_ACCOUNT_ID}:role/eas-terraformer" \
+          --role-session-name "$SESSION_NAME" \
+          --external-id "eas-mno-portal-${ENVIRONMENT}-terraformer" \
+          --output json)
+
+        if [ $? -ne 0 ]; then
+          echo "ERROR: sts assume-role failed"
+          exit 1
+        fi
+
+        AWS_ACCESS_KEY_ID=$(echo $aws_credentials | jq -r '.Credentials.AccessKeyId')
+        AWS_SECRET_ACCESS_KEY=$(echo $aws_credentials | jq -r '.Credentials.SecretAccessKey')
+        AWS_SESSION_TOKEN=$(echo $aws_credentials | jq -r '.Credentials.SessionToken')
+
+        if [ -z "$AWS_ACCESS_KEY_ID" ] || [ "$AWS_ACCESS_KEY_ID" = "null" ]; then
+          echo "ERROR: failed to retrieve assumed-role credentials"
+          exit 1
+        fi
+
+        export AWS_ACCESS_KEY_ID
+        export AWS_SECRET_ACCESS_KEY
+        export AWS_SESSION_TOKEN
+
+        echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"         >> $ENV_FILE
+        echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $ENV_FILE
+        echo "AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN"         >> $ENV_FILE
+
+  build:
+    on-failure: CONTINUE
+    commands:
+      - . /tmp/codebuild_env_export
+      - . $VENV/bin/activate
+      - make test-log-upload; exit 0
+      - echo "Test run completed."
+      - python3.12 ./scripts/report-test-results.py functional-test-reports
+
+  post_build:
+    commands:
+      - |
+        for file in functional-test-reports/*; do
+          if [ "$file" != "${file%.xml}" ]; then
+            cp "$file" "${file}.xml"
+          fi
+        done
+
+      - python3.12 ./scripts/signal-build-pass-or-fail.py $(pwd) $testsuites
+
+artifacts:
+  files:
+    - functional-test-reports/*
+
+reports:
+  mno-portal-functional-test-reports:
+    files:
+      - "*.xml"
+    base-directory: functional-test-reports
+    discard-paths: yes
+    file-format: JUNITXML
