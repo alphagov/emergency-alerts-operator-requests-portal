@@ -139,7 +139,7 @@ def prepare_folder(alert_ref: str):
         logger.error(f"Error creating S3 prefix {prefix}: {e}")
 
 
-def send_invite(email: str, upload_url: str, alert_ref: str, mno_id: str):
+def send_invite(email: str, upload_url: str, provider_message_id: str, mno_id: str, alert_ref: str):
     try:
         token = upload_url.split("?data=", 1)[1]
     except IndexError:
@@ -157,7 +157,7 @@ def send_invite(email: str, upload_url: str, alert_ref: str, mno_id: str):
         "email_address": email,
         "template_id": NOTIFY_TEMPLATE_ID,
         "personalisation": {
-            "broadcastRef": alert_ref,
+            "broadcastRef": provider_message_id,
             "MNO": mno_id,
             "uploadSite": upload_site,
             "oneTimeToken": decoded_token,
@@ -171,7 +171,7 @@ def send_invite(email: str, upload_url: str, alert_ref: str, mno_id: str):
             InvocationType="Event",
             Payload=json.dumps(payload).encode("utf-8")
         )
-        logger.info(f"Sent invite to {email} for MNO {mno_id}")
+        logger.info(f"Sent invite to {email} for MNO {mno_id} with provider_message_id {provider_message_id}")
     except Exception as e:
         logger.error(f"Error sending invite to {email}: {e}")
 
@@ -180,13 +180,13 @@ def lambda_handler(event, context):
     """
     Handler for sending log-upload invites. Expects event:
     {
-      "alert_reference": "ALERT123",
+      "alert_reference": "<broadcast_event_id UUID>",
       "environment":     "dev",
       "broadcast_start": "2025-05-12T09:00:00Z",
       "broadcast_end":   "2025-05-12T09:15:00Z",
       "mnos": [
-        { "mno_id": "EE" },
-        { "mno_id": "VODAFONE" }
+        { "mno_id": "EE",       "provider_message_id": "<BroadcastProviderMessage UUID>" },
+        { "mno_id": "VODAFONE", "provider_message_id": "<BroadcastProviderMessage UUID>" }
       ]
     }
     """
@@ -208,6 +208,7 @@ def lambda_handler(event, context):
     links_generated = []
     for mno in event.get("mnos", []):
         mno_id = mno["mno_id"]
+        provider_message_id = mno["provider_message_id"]
         emails = _get_mno_emails(mno_id)
 
         if not emails:
@@ -218,7 +219,7 @@ def lambda_handler(event, context):
         links_generated.append({"mno_id": mno_id})
 
         for email in emails:
-            send_invite(email, link, alert_ref, mno_id)
+            send_invite(email, link, provider_message_id, mno_id, alert_ref)
 
     mark_invited(alert_ref)
 
