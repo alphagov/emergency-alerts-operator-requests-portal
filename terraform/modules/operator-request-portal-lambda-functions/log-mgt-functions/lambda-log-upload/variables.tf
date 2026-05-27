@@ -46,3 +46,9 @@ variable "mno_email_ssm_prefix" {
   type        = string
   default     = "/operator-portal/mno-emails"
 }
+
+variable "mno_id_ssm_prefix" {
+  description = "SSM Parameter Store prefix for MNO 6-character portal identifiers"
+  type        = string
+  default     = "/operator-portal/mno-ids"
+}

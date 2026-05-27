@@ -1,8 +1,8 @@
 """
 Rather than individual tests - this is an amalgamation of the workflow inside of one test to keep it ATOMIC
   1. Invoke the log-upload-handler Lambda and confirm the invite is created.
-  2. Verify the invite tracking record in DynamoDB.
-  3. Poll Notify for the invite email and extract the one-time upload URL.
+  2. Verify the invite tracking record in DynamoDB (composite key mno_id#broadcast_id).
+  3. Poll Notify for the invite email and extract the upload URL.
   4. PUT a dummy .zip to the upload URL and confirm HTTP 200 + S3 object exists.
   5. PUT again to the same URL and confirm HTTP 403 (single-use link enforced).
 """
@@ -30,15 +30,10 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
-def test_alert_reference():
-    ref = f"FUNCTIONAL-TEST-{uuid.uuid4().hex[:8].upper()}"
-    logger.info("Test session alert reference: %s", ref)
-    return ref
-
-
-@pytest.fixture(scope="session")
-def safe_alert(test_alert_reference):
-    return re.sub(r"[^A-Za-z0-9]+", "_", test_alert_reference).strip("_")
+def broadcast_id():
+    bid = str(uuid.uuid4())
+    logger.info("Test session broadcast_id: %s", bid)
+    return bid
 
 
 @pytest.fixture(scope="session")
@@ -47,22 +42,27 @@ def mno_id():
 
 
 @pytest.fixture(scope="session")
+def mno_portal_id():
+    return config["test_mno"]["portal_id"]
+
+
+@pytest.fixture(scope="session")
 def mno_email():
     return config["test_mno"]["email"]
 
 
 @pytest.fixture(scope="session", autouse=True)
-def cleanup_test_data(test_alert_reference, safe_alert, mno_id):
+def cleanup_test_data(broadcast_id, mno_portal_id):
     yield
 
-    logger.info("=== Teardown: cleaning up test artefacts for %s ===", test_alert_reference)
+    logger.info("=== Teardown: cleaning up test artefacts for broadcast %s ===", broadcast_id)
 
     try:
-        delete_invite_tracking_record(test_alert_reference)
+        delete_invite_tracking_record(mno_portal_id, broadcast_id)
     except Exception as e:
         logger.warning("Could not delete invite tracking record: %s", e)
 
-    s3_key = f"received/logs/{safe_alert}/CBC_{safe_alert}_{mno_id}.zip"
+    s3_key = f"received/logs/{broadcast_id}/CBC_{broadcast_id}_{mno_portal_id}.zip"
     try:
         delete_s3_object(s3_key)
     except Exception as e:
@@ -77,16 +77,18 @@ def _make_dummy_zip(content: str = "MNO portal functional test log content") -> 
 
 
 def test_log_upload_end_to_end(
-    test_alert_reference,
-    safe_alert,
+    broadcast_id,
     mno_id,
+    mno_portal_id,
     mno_email,
 ):
-    logger.info("Step 1: invoking log-upload Lambda for alert '%s'", test_alert_reference)
+    alert_reference = f"FUNCTIONAL-TEST-{uuid.uuid4().hex[:8].upper()}"
+    logger.info("Step 1: invoking log-upload Lambda for broadcast_id '%s'", broadcast_id)
 
     response = invoke_log_upload_lambda(
-        alert_reference=test_alert_reference,
+        alert_reference=alert_reference,
         mno_id=mno_id,
+        broadcast_id=broadcast_id,
     )
 
     assert response.get("statusCode") == 200, (
@@ -97,20 +99,18 @@ def test_log_upload_end_to_end(
     assert body.get("links_generated") == 1, (
         f"Expected 1 upload link to be generated, got: {body}"
     )
-    assert body.get("alert_reference") == test_alert_reference, (
-        f"Lambda echoed unexpected alert_reference: {body}"
-    )
 
     logger.info("Step 1 PASSED: Lambda invocation succeeded, 1 link generated")
 
     logger.info("Step 2: checking invite tracking record in DynamoDB")
 
-    invite_record = get_invite_tracking_record(test_alert_reference)
+    invite_record = get_invite_tracking_record(mno_portal_id, broadcast_id)
     assert invite_record is not None, (
-        f"No invite tracking record found for alert '{test_alert_reference}' "
+        f"No invite tracking record found for portal_id '{mno_portal_id}' broadcast '{broadcast_id}' "
         f"in table '{config['log_invite_tracking_table']}'"
     )
-    assert invite_record.get("AlertRef", {}).get("S") == test_alert_reference
+    expected_key = f"{mno_portal_id}#{broadcast_id}"
+    assert invite_record.get("AlertRef", {}).get("S") == expected_key
 
     logger.info("Step 2 PASSED: invite tracking record present in DynamoDB")
 
@@ -120,7 +120,7 @@ def test_log_upload_end_to_end(
     notification = poll_notify_for_email(
         mno_email=mno_email,
         expected_subject_fragment="CBC activity logs",
-        alert_reference=test_alert_reference,
+        alert_reference=broadcast_id,
         retries=config["verify_code_retry_times"] * 4,
         interval=config["verify_code_retry_interval"] * 3,
     )
@@ -133,15 +133,10 @@ def test_log_upload_end_to_end(
         f"Expected portal hostname '{portal_host}' in email body, got:\n{email_body}"
     )
 
-    expected_path_fragment = f"/received/logs/{safe_alert}/CBC_{safe_alert}_{mno_id}.zip"
-    assert expected_path_fragment in email_body, (
-        f"Expected upload path fragment '{expected_path_fragment}' in email body"
-    )
-
     pattern = re.compile(
-        r"(https://" + re.escape(portal_host) + r"/received/logs/"
-        + re.escape(safe_alert) + r"/CBC_" + re.escape(safe_alert)
-        + r"_" + re.escape(mno_id) + r"\.zip\?data=[^\s]+)"
+        r"(https://" + re.escape(portal_host)
+        + r"/log-upload\?mno=" + re.escape(mno_portal_id)
+        + r"&broadcast_id=" + re.escape(broadcast_id) + r")"
     )
     match = pattern.search(email_body)
     assert match, "Could not extract upload URL from email body — pattern not matched"
@@ -168,7 +163,7 @@ def test_log_upload_end_to_end(
         f"Response body: {put_response.text[:500]}"
     )
 
-    expected_key = f"received/logs/{safe_alert}/CBC_{safe_alert}_{mno_id}.zip"
+    expected_key = f"received/logs/{broadcast_id}/CBC_{broadcast_id}_{mno_portal_id}.zip"
     assert s3_object_exists(expected_key), (
         f"Expected S3 object not found: s3://{config['log_bucket_name']}/{expected_key}"
     )

@@ -9,13 +9,13 @@ from config import config
 logger = logging.getLogger(__name__)
 
 
-def invoke_log_upload_lambda(alert_reference: str, mno_id: str) -> dict:
+def invoke_log_upload_lambda(alert_reference: str, mno_id: str, broadcast_id: str) -> dict:
     """
     Synchronously invoke the log-upload-handler Lambda to trigger the upload
     invite flow for a single MNO.
 
     The Lambda fetches MNO contact emails from SSM Parameter Store,
-    so only mno_id is required.
+    so only mno_id is required alongside the broadcast_id.
     """
     client = boto3.client("lambda", region_name=config["aws_region"])
 
@@ -27,6 +27,7 @@ def invoke_log_upload_lambda(alert_reference: str, mno_id: str) -> dict:
         "mnos": [
             {
                 "mno_id": mno_id,
+                "provider_message_id": broadcast_id,
             }
         ],
     }
@@ -59,40 +60,44 @@ def invoke_log_upload_lambda(alert_reference: str, mno_id: str) -> dict:
     return body
 
 
-def get_upload_tracking_record(reference: str) -> dict | None:
+def get_upload_tracking_record(mno_id: str, broadcast_id: str) -> dict | None:
     client = boto3.client("dynamodb", region_name=config["aws_region"])
+    key = f"{mno_id}#{broadcast_id}"
     resp = client.get_item(
         TableName=config["log_upload_tracking_table"],
-        Key={"RequestId": {"S": reference}},
+        Key={"RequestId": {"S": key}},
     )
     return resp.get("Item")
 
 
-def get_invite_tracking_record(alert_ref: str) -> dict | None:
+def get_invite_tracking_record(mno_id: str, broadcast_id: str) -> dict | None:
     client = boto3.client("dynamodb", region_name=config["aws_region"])
+    key = f"{mno_id}#{broadcast_id}"
     resp = client.get_item(
         TableName=config["log_invite_tracking_table"],
-        Key={"AlertRef": {"S": alert_ref}},
+        Key={"AlertRef": {"S": key}},
     )
     return resp.get("Item")
 
 
-def delete_invite_tracking_record(alert_ref: str):
+def delete_invite_tracking_record(mno_id: str, broadcast_id: str):
     client = boto3.client("dynamodb", region_name=config["aws_region"])
+    key = f"{mno_id}#{broadcast_id}"
     client.delete_item(
         TableName=config["log_invite_tracking_table"],
-        Key={"AlertRef": {"S": alert_ref}},
+        Key={"AlertRef": {"S": key}},
     )
-    logger.info("Deleted invite tracking record for alert: %s", alert_ref)
+    logger.info("Deleted invite tracking record for mno=%s broadcast=%s", mno_id, broadcast_id)
 
 
-def delete_upload_tracking_record(reference: str):
+def delete_upload_tracking_record(mno_id: str, broadcast_id: str):
     client = boto3.client("dynamodb", region_name=config["aws_region"])
+    key = f"{mno_id}#{broadcast_id}"
     client.delete_item(
         TableName=config["log_upload_tracking_table"],
-        Key={"RequestId": {"S": reference}},
+        Key={"RequestId": {"S": key}},
     )
-    logger.info("Deleted upload tracking record: %s", reference)
+    logger.info("Deleted upload tracking record for mno=%s broadcast=%s", mno_id, broadcast_id)
 
 
 def s3_object_exists(key: str) -> bool:

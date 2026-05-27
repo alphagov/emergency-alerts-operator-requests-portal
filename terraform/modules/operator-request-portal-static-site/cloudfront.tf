@@ -34,6 +34,27 @@ resource "aws_cloudfront_distribution" "cdn" {
   }
 
   ordered_cache_behavior {
+    path_pattern           = "/log-upload"
+    target_origin_id       = "S3-Endpoint"
+    viewer_protocol_policy = "https-only"
+
+    allowed_methods = ["GET", "HEAD", "PUT", "OPTIONS", "DELETE", "POST", "PATCH"]
+    cached_methods  = ["GET", "HEAD"]
+
+    compress        = true
+    cache_policy_id = data.aws_cloudfront_cache_policy.caching_disabled.id
+
+    dynamic "lambda_function_association" {
+      for_each = var.lambda_log_upload_arn != "" ? [1] : []
+      content {
+        event_type   = "viewer-request"
+        lambda_arn   = var.lambda_log_upload_arn
+        include_body = true
+      }
+    }
+  }
+
+  ordered_cache_behavior {
     path_pattern           = "/received/logs/*"
     target_origin_id       = "S3-Endpoint"
     viewer_protocol_policy = "https-only"
