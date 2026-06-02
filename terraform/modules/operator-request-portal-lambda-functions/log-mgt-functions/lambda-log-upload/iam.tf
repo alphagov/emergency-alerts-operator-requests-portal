@@ -41,7 +41,7 @@ resource "aws_iam_role_policy" "log_upload_policy" {
           "s3:PutObject"
         ]
         Resource = [
-          "arn:aws:s3:::${var.log_bucket_name}/logs/*"
+          "arn:aws:s3:::${var.log_bucket_name}/received/logs/*"
         ]
       },
 
