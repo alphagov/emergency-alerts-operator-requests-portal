@@ -33,3 +33,8 @@ variable "download_link_expiry_days" {
   type        = number
   default     = 30
 }
+
+variable "log_upload_tracking_table" {
+  description = "Name of the DynamoDB table used to track log upload invites (for MNO name lookup)"
+  type        = string
+}

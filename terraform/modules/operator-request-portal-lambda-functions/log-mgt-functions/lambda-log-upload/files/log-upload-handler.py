@@ -70,7 +70,9 @@ def mark_invited(mno_id: str, broadcast_id: str):
     )
 
 
-def register_upload_reference(mno_id: str, broadcast_id: str, s3_location: str) -> bool:
+def register_upload_reference(
+    mno_id: str, broadcast_id: str, s3_location: str, mno_name: str
+) -> bool:
     key = _invite_key(mno_id, broadcast_id)
     expires_at = (datetime.now(timezone.utc) + timedelta(seconds=EXPIRY_SECONDS)).isoformat()
     try:
@@ -83,6 +85,7 @@ def register_upload_reference(mno_id: str, broadcast_id: str, s3_location: str) 
                 "Used": {"BOOL": False},
                 "S3Location": {"S": s3_location},
                 "MnoId": {"S": mno_id},
+                "MnoName": {"S": mno_name},
                 "BroadcastId": {"S": broadcast_id}
             },
             ConditionExpression="attribute_not_exists(RequestId)"
@@ -106,8 +109,8 @@ def prepare_folder(broadcast_id: str):
         logger.error(f"Error creating S3 prefix for broadcast {broadcast_id}: {e}")
 
 
-def send_invite(email: str, broadcast_id: str, mno_id: str):
-    upload_site = f"https://{UPLOAD_DOMAIN}/upload-logs.html?mno={mno_id}&broadcast_id={broadcast_id}"
+def send_invite(email: str, broadcast_id: str, mno_name: str, portal_id: str):
+    upload_site = f"https://{UPLOAD_DOMAIN}/upload-logs.html?mno={portal_id}&broadcast_id={broadcast_id}"
     portal_upload_help = f"https://{UPLOAD_DOMAIN}/automate-upload.html"
 
     payload = {
@@ -115,8 +118,8 @@ def send_invite(email: str, broadcast_id: str, mno_id: str):
         "template_id": NOTIFY_TEMPLATE_ID,
         "personalisation": {
             "broadcastRef": broadcast_id,
-            "MNO": mno_id,
-            "MNOid": mno_id,
+            "MNO": mno_name,
+            "MNOid": portal_id,
             "uploadSite": upload_site,
             "portalUploadHelp": portal_upload_help,
         }
@@ -128,7 +131,7 @@ def send_invite(email: str, broadcast_id: str, mno_id: str):
             InvocationType="Event",
             Payload=json.dumps(payload).encode("utf-8")
         )
-        logger.info(f"Sent invite to {email} for MNO {mno_id} broadcast {broadcast_id}")
+        logger.info(f"Sent invite to {email} for MNO {mno_name} ({portal_id}) broadcast {broadcast_id}")
     except Exception as e:
         logger.error(f"Error sending invite to {email}: {e}")
 
@@ -176,10 +179,10 @@ def lambda_handler(event, context):
 
         s3_location = f"/received/logs/{broadcast_id}/CBC_{broadcast_id}_{portal_id}.zip"
         prepare_folder(broadcast_id)
-        register_upload_reference(portal_id, broadcast_id, s3_location)
+        register_upload_reference(portal_id, broadcast_id, s3_location, mno_id)
 
         for email in emails:
-            send_invite(email, broadcast_id, portal_id)
+            send_invite(email, broadcast_id, mno_id, portal_id)
 
         mark_invited(portal_id, broadcast_id)
         invites_sent.append({"mno_id": mno_id, "portal_id": portal_id})
