@@ -1,6 +1,4 @@
 import os
-import re
-import base64
 import logging
 from datetime import datetime, timezone
 from urllib.parse import parse_qs
@@ -20,20 +18,11 @@ ddb = boto3.client(
 
 def error_response(status_code: int, status_desc: str, body: str, error_type: str = None) -> dict:
     headers = {
-        "cache-control": [{
-            "key": "Cache-Control",
-            "value": "no-cache"
-        }],
-        "content-type": [{
-            "key": "Content-Type",
-            "value": "text/html; charset=utf-8"
-        }]
+        "cache-control": [{"key": "Cache-Control", "value": "no-cache"}],
+        "content-type": [{"key": "Content-Type", "value": "text/html; charset=utf-8"}]
     }
     if error_type:
-        headers["x-error-type"] = [{
-            "key": "X-Error-Type",
-            "value": error_type
-        }]
+        headers["x-error-type"] = [{"key": "X-Error-Type", "value": error_type}]
     return {
         "status": str(status_code),
         "statusDescription": status_desc,
@@ -43,85 +32,42 @@ def error_response(status_code: int, status_desc: str, body: str, error_type: st
     }
 
 
-def lambda_handler(event, context):
-    logger.info("Lambda@Edge invoked. Event: %s", event)
-    req = event["Records"][0]["cf"]["request"]
+def _parse_params(qs: str):
+    params = parse_qs(qs)
+    mno_id = params.get("mno", [None])[0]
+    broadcast_id = params.get("broadcast_id", [None])[0]
+    return mno_id, broadcast_id
 
-    if req.get("method") != "PUT":
-        return error_response(403, "Forbidden", "Only PUT is allowed", "method_not_allowed")
 
-    qs = req.get("querystring", "")
-    if not qs:
-        return error_response(400, "Bad Request", "Missing query string", "missing_querystring")
-
-    token = parse_qs(qs).get("data", [None])[0]
-    if not token:
-        return error_response(400, "Bad Request", "Missing data parameter", "missing_token")
-
-    raw_b64 = token
-    if len(raw_b64) % 4:
-        raw_b64 += "=" * (4 - len(raw_b64) % 4)
-
+def _get_tracking_record(composite_key: str):
     try:
-        decoded = base64.urlsafe_b64decode(raw_b64).decode("utf-8")
-        logger.info("Decoded token: %s", decoded)
-    except Exception:
-        return error_response(400, "Bad Request", "Invalid data token", "invalid_token")
-
-    try:
-        kv = dict(pair.split("=", 1) for pair in decoded.split("&"))
-    except Exception:
-        return error_response(400, "Bad Request", "Malformed token parameters", "malformed_token")
-
-    for f in ("location", "type", "expiry", "reference"):
-        if f not in kv:
-            return error_response(400, "Bad Request", f"Missing {f}", "missing_parameter")
-    if kv["type"] != "upload":
-        return error_response(400, "Bad Request", "Invalid request type", "invalid_type")
-
-    try:
-        exp = datetime.strptime(kv["expiry"], "%Y%m%d%H%M").replace(tzinfo=timezone.utc)
-    except Exception:
-        return error_response(400, "Bad Request", "Invalid expiry format", "invalid_expiry")
-    if datetime.now(timezone.utc) > exp:
-        return error_response(403, "Forbidden", "This upload link has expired", "expired_link")
-
-    reference = kv["reference"]
-
-    try:
-        resp = ddb.get_item(
-            TableName=TRACK_TABLE,
-            Key={"RequestId": {"S": reference}}
-        )
+        resp = ddb.get_item(TableName=TRACK_TABLE, Key={"RequestId": {"S": composite_key}})
+        return resp.get("Item"), None
     except Exception as e:
-        logger.error("DynamoDB get_item failed for %s: %s", reference, e)
-        return error_response(403, "Forbidden", "Invalid reference", "invalid_token")
+        logger.error("DynamoDB get_item failed for %s: %s", composite_key, e)
+        return None, error_response(403, "Forbidden", "Invalid request", "invalid_request")
 
-    item = resp.get("Item")
-    if not item:
-        logger.warning("No tracking record for %s", reference)
-        return error_response(403, "Forbidden", "Invalid reference", "invalid_token")
 
-    stored_token = item.get("RawToken", {}).get("S")
-    if stored_token is None or stored_token != raw_b64:
-        logger.warning("Token mismatch: client sent %s, but DynamoDB has %s", raw_b64, stored_token)
-        return error_response(400, "Forbidden", "Invalid token", "invalid_token")
+def _check_expiry(item: dict):
+    expires_at_str = item.get("ExpiresAt", {}).get("S")
+    if not expires_at_str:
+        return None
+    try:
+        expires_at = datetime.fromisoformat(expires_at_str)
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > expires_at:
+            return error_response(403, "Forbidden", "This upload link has expired", "expired_link")
+    except Exception as e:
+        logger.warning("Could not parse ExpiresAt '%s': %s", expires_at_str, e)
+    return None
 
-    loc = kv["location"]
-    m = re.match(
-        r"^/received/logs/(?P<alert>[\w-]+)/CBC_(?P=alert)_(?P<mno>[^.]+)\.zip$",
-        loc
-    )
-    if not m:
-        return error_response(400, "Bad Request", "Invalid upload location", "invalid_location")
 
-    if item.get("Used", {}).get("BOOL", False):
-        return error_response(403, "Forbidden", "This link has already been used", "already_used")
-
+def _mark_used(composite_key: str):
     try:
         ddb.update_item(
             TableName=TRACK_TABLE,
-            Key={"RequestId": {"S": reference}},
+            Key={"RequestId": {"S": composite_key}},
             UpdateExpression="SET #u = :true, UsedAt = :now",
             ConditionExpression="attribute_not_exists(#u) OR #u = :false",
             ExpressionAttributeNames={"#u": "Used"},
@@ -131,13 +77,54 @@ def lambda_handler(event, context):
                 ":now": {"S": datetime.now(timezone.utc).isoformat()}
             }
         )
+        return None
     except ddb.exceptions.ConditionalCheckFailedException:
         return error_response(403, "Forbidden", "This link has already been used", "already_used")
     except Exception as e:
-        logger.error("DynamoDB error in mark_used: %s", e)
+        logger.error("DynamoDB error marking upload used for %s: %s", composite_key, e)
+        return error_response(500, "Internal Server Error", "Processing error", "internal_error")
+
+
+def lambda_handler(event, context):
+    logger.info("Lambda@Edge invoked. Event: %s", event)
+    req = event["Records"][0]["cf"]["request"]
+
+    if req.get("method") != "PUT":
+        return error_response(403, "Forbidden", "Only PUT is allowed", "method_not_allowed")
+
+    mno_id, broadcast_id = _parse_params(req.get("querystring", ""))
+
+    if not mno_id:
+        return error_response(400, "Bad Request", "Missing mno parameter", "missing_mno")
+    if not broadcast_id:
+        return error_response(400, "Bad Request", "Missing broadcast_id parameter", "missing_broadcast_id")
+
+    composite_key = f"{mno_id}#{broadcast_id}"
+
+    item, err = _get_tracking_record(composite_key)
+    if err:
+        return err
+    if not item:
+        logger.warning("No tracking record for mno=%s broadcast_id=%s", mno_id, broadcast_id)
+        return error_response(403, "Forbidden", "Invalid mno or broadcast_id", "invalid_request")
+
+    err = _check_expiry(item)
+    if err:
+        return err
+
+    if item.get("Used", {}).get("BOOL", False):
         return error_response(403, "Forbidden", "This link has already been used", "already_used")
 
-    req["uri"] = loc
+    err = _mark_used(composite_key)
+    if err:
+        return err
+
+    s3_location = item.get("S3Location", {}).get("S")
+    if not s3_location:
+        logger.error("No S3Location in tracking record for %s", composite_key)
+        return error_response(500, "Internal Server Error", "Missing upload destination", "internal_error")
+
+    req["uri"] = s3_location
     req["querystring"] = ""
-    logger.info("Upload allowed: %s (ref=%s)", req["uri"], reference)
+    logger.info("Upload allowed: uri=%s (mno=%s, broadcast_id=%s)", req["uri"], mno_id, broadcast_id)
     return req

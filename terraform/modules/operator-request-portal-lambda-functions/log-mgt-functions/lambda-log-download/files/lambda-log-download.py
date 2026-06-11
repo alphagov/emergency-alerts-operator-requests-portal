@@ -15,6 +15,7 @@ DOWNLOAD_DOMAIN = os.environ["DOWNLOAD_DOMAIN"]
 NOTIFY_LAMBDA_ARN = os.environ["NOTIFY_LAMBDA_ARN"]
 NOTIFY_TEMPLATE_ID = os.environ["NOTIFY_TEMPLATE_ID"]
 DOWNLOAD_TRACKING_TABLE = os.environ["DOWNLOAD_TRACKING_TABLE"]
+LOG_UPLOAD_TRACKING_TABLE = os.environ["LOG_UPLOAD_TRACKING_TABLE"]
 DOWNLOAD_LINK_EXPIRY_DAYS = int(os.environ["DOWNLOAD_LINK_EXPIRY_DAYS"])
 
 raw_list = os.environ["ALERTS_TEAM_EMAILS"]
@@ -22,35 +23,30 @@ recipients = [email.strip() for email in raw_list.split(",") if email.strip()]
 
 ddb = boto3.client("dynamodb")
 lambda_cli = boto3.client("lambda")
-s3 = boto3.client("s3")
 
-# Regex to extract alert/mno from key
-KEY_RE = re.compile(r"^received/logs/(?P<alert>[^/]+)/CBC_(?P=alert)_(?P<mno>[^.]+)\.zip$")
+KEY_RE = re.compile(
+    r"^received/logs/(?P<alert>[^/]+)/CBC_(?P=alert)_(?P<mno>[^.]+)\.zip$"
+)
 
 
-def get_original_alert_ref(safe_alert: str) -> str:
+def _get_mno_name(portal_id: str, broadcast_id: str) -> str:
     """
-    Retrieve the original alert reference from S3 folder metadata.
-    Falls back to the safe_alert if metadata is not found.
+    Look up the MNO name from the upload tracking record.
+    Falls back to portal_id if the record or field is not found.
     """
+    key = f"{portal_id}#{broadcast_id}"
     try:
-        # Try to get metadata from the folder object
-        folder_key = f"received/logs/{safe_alert}/"
-        response = s3.head_object(Bucket=LOG_BUCKET, Key=folder_key)
-        metadata = response.get('Metadata', {})
-        original_ref = metadata.get('original-alert-ref')
-
-        if original_ref:
-            logger.info(f"Retrieved original alert ref: {original_ref} for safe_alert: {safe_alert}")
-            return original_ref
-        else:
-            logger.warning(f"No original-alert-ref metadata found for {safe_alert}")
-            return safe_alert
-
+        resp = ddb.get_item(
+            TableName=LOG_UPLOAD_TRACKING_TABLE,
+            Key={"RequestId": {"S": key}}
+        )
+        name = resp.get("Item", {}).get("MnoName", {}).get("S")
+        if name:
+            return name
+        logger.warning("No MnoName in upload tracking record for %s", key)
     except Exception as e:
-        logger.error(f"Error retrieving metadata for {safe_alert}: {e}")
-        # Fallback: try to reverse the transformation (May not work if dashes and underscores are both present in original alert name)
-        return safe_alert.replace('_', '-')
+        logger.warning("Could not look up MNO name for %s: %s", key, e)
+    return portal_id
 
 
 def generate_download_link(alert: str, mno: str) -> str:
@@ -58,12 +54,11 @@ def generate_download_link(alert: str, mno: str) -> str:
     expiry = now + timedelta(days=DOWNLOAD_LINK_EXPIRY_DAYS)
     expiry_str = expiry.strftime("%Y%m%d%H%M")
 
-    safe_alert = re.sub(r'[^A-Za-z0-9]+', '_', alert).strip('_')
     token_id = uuid.uuid4().hex
-    reference = f"{safe_alert}-{token_id}"
+    reference = f"{alert}-{token_id}"
 
     params = (
-        f"alert={safe_alert}"
+        f"alert={alert}"
         f"&mno={mno}"
         f"&expiry={expiry_str}"
         f"&reference={reference}"
@@ -83,20 +78,25 @@ def generate_download_link(alert: str, mno: str) -> str:
     return raw_b64
 
 
-def send_notification(safe_alert: str, mno: str, download_link: str):
-    original_alert = get_original_alert_ref(safe_alert)
+def send_notification(broadcast_id: str, portal_id: str, download_link: str):
+    mno_name = _get_mno_name(portal_id, broadcast_id)
 
-    full_download_url = f"https://{DOWNLOAD_DOMAIN}/download/logs/{safe_alert}/CBC_{safe_alert}_{mno}.zip?data={download_link}"
+    file_path = f"/CBC_{broadcast_id}_{portal_id}.zip"
+    full_download_url = (
+        f"https://{DOWNLOAD_DOMAIN}"
+        f"/download/logs/{broadcast_id}"
+        f"{file_path}?data={download_link}"
+    )
 
     for email in recipients:
         payload = {
             "email_address": email,
             "template_id": NOTIFY_TEMPLATE_ID,
             "personalisation": {
-                "broadcastRef": original_alert,
-                "MNO": mno,
+                "broadcastRef": broadcast_id,
+                "MNO": mno_name,
                 "downloadSite": f"https://{DOWNLOAD_DOMAIN}/download.html",
-                "downloadLink": full_download_url  # Now it's a full URL
+                "downloadLink": full_download_url
             }
         }
         lambda_cli.invoke(
@@ -104,12 +104,12 @@ def send_notification(safe_alert: str, mno: str, download_link: str):
             InvocationType="Event",
             Payload=json.dumps(payload).encode("utf-8")
         )
-        logger.info(f"Sent download link for {original_alert}/{mno} to {email}")
+        logger.info("Sent download link for %s/%s to %s", broadcast_id, mno_name, email)
 
 
 def lambda_handler(event, context):
     """
-    Triggered by S3 PutObject on upload/logs/... .zip.
+    Triggered by S3 PutObject on received/logs/... .zip.
     """
     for rec in event["Records"]:
         key = rec["s3"]["object"]["key"]
@@ -118,11 +118,11 @@ def lambda_handler(event, context):
             logger.warning("S3 key did not match expected pattern: %s", key)
             continue
 
-        safe_alert = m.group("alert")
-        mno = m.group("mno")
-        logger.info("New logs for safe_alert=%s, mno=%s", safe_alert, mno)
+        broadcast_id = m.group("alert")
+        portal_id = m.group("mno")
+        logger.info("New logs for broadcast_id=%s, portal_id=%s", broadcast_id, portal_id)
 
-        token = generate_download_link(safe_alert, mno)
-        send_notification(safe_alert, mno, token)
+        token = generate_download_link(broadcast_id, portal_id)
+        send_notification(broadcast_id, portal_id, token)
 
     return {"status": "ok"}

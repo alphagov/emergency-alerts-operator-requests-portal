@@ -1,3 +1,6 @@
+data "aws_region" "current" {}
+data "aws_caller_identity" "current" {}
+
 data "aws_iam_policy_document" "assume_lambda" {
   statement {
     effect  = "Allow"
@@ -23,11 +26,13 @@ resource "aws_iam_role_policy" "lambda_policy" {
     Statement = [
       {
         Effect = "Allow",
-        Action = [
-          "dynamodb:PutItem",
-          "dynamodb:GetItem"
-        ],
+        Action = ["dynamodb:PutItem", "dynamodb:GetItem"],
         Resource = aws_dynamodb_table.download_tracking.arn
+      },
+      {
+        Effect   = "Allow",
+        Action   = ["dynamodb:GetItem"],
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${var.log_upload_tracking_table}"
       },
       {
         Effect   = "Allow",

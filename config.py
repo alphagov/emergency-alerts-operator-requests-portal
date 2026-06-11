@@ -38,9 +38,13 @@ def setup_config():
             "log_bucket_name": os.environ["LOG_BUCKET_NAME"],
             # Notify API key — used to poll received emails via the Notify API
             "notify_api_key": os.environ["NOTIFY_SERVICE_API_KEY"],
-            # The dummy MNO used in tests — must exist as a configured MNO in the environment
+            # The dummy MNO used in tests — must exist as a configured MNO in the environment.
+            # mno_id is the name key passed in the Lambda event (e.g. "test_mno_001").
+            # portal_id is the resolved 6-character identifier stored in SSM and used in
+            # upload URLs, DynamoDB keys, and S3 paths.
             "test_mno": {
                 "mno_id": os.environ["TEST_MNO_ID"],
+                "portal_id": os.environ["TEST_MNO_PORTAL_ID"],
                 "email": os.environ["TEST_MNO_EMAIL"],
             },
             # DynamoDB tables

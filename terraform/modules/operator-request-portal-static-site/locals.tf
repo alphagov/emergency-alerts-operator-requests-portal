@@ -6,6 +6,7 @@ locals {
   })
 
   page_configs = {
+    "automate-upload.html"    = { title = "Automated Log Uploads - Operator Portal", content_file = "automate-upload.html" }
     "download-logs.html"      = { title = "Download Logs - Operator Portal", content_file = "download-logs.html" }
     "download-success.html"   = { title = "Download Success - Operator Portal", content_file = "download-success.html" }
     "error.html"              = { title = "Error - Operator Portal", content_file = "error.html" }

@@ -3,7 +3,6 @@ import base64
 import logging
 from datetime import datetime, timezone
 from urllib.parse import parse_qs, unquote
-import re
 
 import boto3
 
@@ -20,20 +19,11 @@ ddb = boto3.client(
 
 def error_response(status_code: int, status_desc: str, body: str, error_type: str = None) -> dict:
     headers = {
-        "cache-control": [{
-            "key": "Cache-Control",
-            "value": "no-cache"
-        }],
-        "content-type": [{
-            "key": "Content-Type",
-            "value": "text/plain; charset=utf-8"
-        }]
+        "cache-control": [{"key": "Cache-Control", "value": "no-cache"}],
+        "content-type": [{"key": "Content-Type", "value": "text/plain; charset=utf-8"}]
     }
     if error_type:
-        headers["x-error-type"] = [{
-            "key": "X-Error-Type",
-            "value": error_type
-        }]
+        headers["x-error-type"] = [{"key": "X-Error-Type", "value": error_type}]
     return {
         "status": str(status_code),
         "statusDescription": status_desc,
@@ -41,6 +31,100 @@ def error_response(status_code: int, status_desc: str, body: str, error_type: st
         "bodyEncoding": "text",
         "headers": headers
     }
+
+
+def _pad(b64: str) -> str:
+    return b64 + "=" * (4 - len(b64) % 4) if len(b64) % 4 else b64
+
+
+def _decode_token(token: str):
+    raw_b64 = _pad(token)
+    try:
+        decoded = base64.urlsafe_b64decode(raw_b64).decode("utf-8")
+        return raw_b64, decoded, None
+    except Exception:
+        pass
+
+    raw_b64 = _pad(unquote(token))
+    try:
+        decoded = base64.urlsafe_b64decode(raw_b64).decode("utf-8")
+        return raw_b64, decoded, None
+    except Exception as e:
+        logger.error("Failed to decode token: %s", e)
+        return None, None, error_response(400, "Bad Request", "Invalid data token", "invalid_token")
+
+
+def _parse_token(decoded: str):
+    try:
+        kv = dict(pair.split("=", 1) for pair in decoded.split("&"))
+    except Exception as e:
+        logger.error("Failed to parse token parameters: %s", e)
+        return None, error_response(400, "Bad Request", "Malformed token parameters", "malformed_token")
+
+    for field in ("alert", "mno", "expiry", "reference"):
+        if field not in kv:
+            logger.error("Missing required field: %s", field)
+            return None, error_response(400, "Bad Request", f"Missing {field}", "missing_parameter")
+
+    return kv, None
+
+
+def _check_expiry(kv: dict):
+    try:
+        exp = datetime.strptime(kv["expiry"], "%Y%m%d%H%M").replace(tzinfo=timezone.utc)
+    except Exception as e:
+        logger.error("Invalid expiry format: %s", e)
+        return error_response(400, "Bad Request", "Invalid expiry format", "invalid_expiry")
+
+    if datetime.now(timezone.utc) > exp:
+        logger.warning("Expired token for reference: %s", kv["reference"])
+        return error_response(403, "Forbidden", "This download link has expired", "expired_link")
+
+    return None
+
+
+def _get_tracking_record(reference: str, raw_b64: str):
+    try:
+        resp = ddb.get_item(TableName=TRACK_TABLE, Key={"RequestId": {"S": reference}})
+    except Exception as e:
+        logger.error("DynamoDB get_item failed for %s: %s", reference, e)
+        return None, error_response(403, "Forbidden", "Invalid reference", "invalid_token")
+
+    item = resp.get("Item")
+    if not item:
+        logger.warning("No tracking record found for reference: %s", reference)
+        return None, error_response(403, "Forbidden", "Invalid reference", "invalid_token")
+
+    stored_token = item.get("RawDownloadToken", {}).get("S")
+    if stored_token is None or stored_token != raw_b64:
+        logger.warning("Token mismatch for reference: %s", reference)
+        return None, error_response(403, "Forbidden", "Invalid token", "invalid_token")
+
+    return item, None
+
+
+def _increment_download(reference: str):
+    update_expr = (
+        "SET DownloadCount = if_not_exists(DownloadCount, :zero) + :one,"
+        " LastDownloadAt = :now, #u = :true"
+    )
+    try:
+        ddb.update_item(
+            TableName=TRACK_TABLE,
+            Key={"RequestId": {"S": reference}},
+            UpdateExpression=update_expr,
+            ExpressionAttributeNames={"#u": "Used"},
+            ExpressionAttributeValues={
+                ":zero": {"N": "0"},
+                ":one": {"N": "1"},
+                ":true": {"BOOL": True},
+                ":now": {"S": datetime.now(timezone.utc).isoformat()}
+            }
+        )
+        return None
+    except Exception as e:
+        logger.error("Failed to update download count for %s: %s", reference, e)
+        return error_response(500, "Internal Server Error", "Could not track download")
 
 
 def lambda_handler(event, context):
@@ -52,110 +136,41 @@ def lambda_handler(event, context):
 
     qs = req.get("querystring", "")
     if not qs:
-        logger.error("Missing query string")
         return error_response(400, "Bad Request", "Missing query string", "missing_querystring")
 
-    parsed_qs = parse_qs(qs)
-    token = parsed_qs.get("data", [None])[0]
-
+    token = parse_qs(qs).get("data", [None])[0]
     if not token:
-        logger.error("Missing data parameter")
         return error_response(400, "Bad Request", "Missing data parameter", "missing_token")
 
-    # Try decoding token
-    raw_b64 = token
-    if len(raw_b64) % 4:
-        raw_b64 += "=" * (4 - len(raw_b64) % 4)
+    raw_b64, decoded, err = _decode_token(token)
+    if err:
+        return err
 
-    try:
-        decoded = base64.urlsafe_b64decode(raw_b64).decode("utf-8")
-    except Exception:
-        raw_b64 = unquote(token)
-        if len(raw_b64) % 4:
-            raw_b64 += "=" * (4 - len(raw_b64) % 4)
+    kv, err = _parse_token(decoded)
+    if err:
+        return err
 
-        try:
-            decoded = base64.urlsafe_b64decode(raw_b64).decode("utf-8")
-        except Exception as e:
-            logger.error("Failed to decode token: %s", str(e))
-            return error_response(400, "Bad Request", "Invalid data token", "invalid_token")
-
-    try:
-        kv = dict(pair.split("=", 1) for pair in decoded.split("&"))
-    except Exception as e:
-        logger.error("Failed to parse token parameters: %s", str(e))
-        return error_response(400, "Bad Request", "Malformed token parameters", "malformed_token")
-
-    # Validate required fields
-    required_fields = ("alert", "mno", "expiry", "reference")
-    for field in required_fields:
-        if field not in kv:
-            logger.error("Missing required field: %s", field)
-            return error_response(400, "Bad Request", f"Missing {field}", "missing_parameter")
-
-    # Check expiry
-    try:
-        exp = datetime.strptime(kv["expiry"], "%Y%m%d%H%M").replace(tzinfo=timezone.utc)
-    except Exception as e:
-        logger.error("Invalid expiry format: %s", str(e))
-        return error_response(400, "Bad Request", "Invalid expiry format", "invalid_expiry")
-
-    if datetime.now(timezone.utc) > exp:
-        logger.warning("Expired token for reference: %s", kv["reference"])
-        return error_response(403, "Forbidden", "This download link has expired", "expired_link")
+    err = _check_expiry(kv)
+    if err:
+        return err
 
     reference = kv["reference"]
 
-    # Validate token against database
-    try:
-        resp = ddb.get_item(
-            TableName=TRACK_TABLE,
-            Key={"RequestId": {"S": reference}}
-        )
-    except Exception as e:
-        logger.error("DynamoDB get_item failed for reference %s: %s", reference, str(e))
-        return error_response(403, "Forbidden", "Invalid reference", "invalid_token")
+    item, err = _get_tracking_record(reference, raw_b64)
+    if err:
+        return err
 
-    item = resp.get("Item")
-    if not item:
-        logger.warning("No tracking record found for reference: %s", reference)
-        return error_response(403, "Forbidden", "Invalid reference", "invalid_token")
+    err = _increment_download(reference)
+    if err:
+        return err
 
-    stored_token = item.get("RawDownloadToken", {}).get("S")
-    if stored_token is None or stored_token != raw_b64:
-        logger.warning("Token mismatch for reference: %s", reference)
-        return error_response(403, "Forbidden", "Invalid token", "invalid_token")
-
-    # Track download count (but don't restrict multiple downloads for logs)
-    download_count = item.get("DownloadCount", {}).get("N", "0")
-    logger.info("Download count for reference %s: %s", reference, download_count)
-
-    # Increment download count
-    try:
-        ddb.update_item(
-            TableName=TRACK_TABLE,
-            Key={"RequestId": {"S": reference}},
-            UpdateExpression="SET DownloadCount = if_not_exists(DownloadCount, :zero) + :one, LastDownloadAt = :now, #u = :true",
-            ExpressionAttributeNames={"#u": "Used"},
-            ExpressionAttributeValues={
-                ":zero": {"N": "0"},
-                ":one": {"N": "1"},
-                ":true": {"BOOL": True},
-                ":now": {"S": datetime.now(timezone.utc).isoformat()}
-            }
-        )
-        logger.info("Incremented download count for reference: %s", reference)
-    except Exception as e:
-        logger.error("Failed to update download count for reference %s: %s", reference, str(e))
-        return error_response(500, "Internal Server Error", "Could not track download")
-
-    # Generate S3 path and allow download
+    download_count = int(item.get("DownloadCount", {}).get("N", "0")) + 1
     alert = kv["alert"]
     mno = kv["mno"]
-    safe_alert = re.sub(r'[^A-Za-z0-9]+', '_', alert).strip('_')
-    s3_path = f"/received/logs/{safe_alert}/CBC_{safe_alert}_{mno}.zip"
+    s3_path = f"/received/logs/{alert}/CBC_{alert}_{mno}.zip"
     req["uri"] = s3_path
 
-    new_count = int(download_count) + 1
-    logger.info("Download authorized for reference: %s, path: %s (download #%d)", reference, s3_path, new_count)
+    logger.info(
+        "Download authorized: ref=%s path=%s count=%d", reference, s3_path, download_count
+    )
     return req

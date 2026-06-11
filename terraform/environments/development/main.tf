@@ -152,6 +152,7 @@ module "lambda_log_download" {
   notify_template_id        = local.notify_templates.log_download
   alerts_team_emails        = "alec.ashmore@digital.cabinet-office.gov.uk"
   download_link_expiry_days = var.download_link_expiry_days
+  log_upload_tracking_table = local.log_upload_tracking_table
 }
 
 # Log upload Lambda

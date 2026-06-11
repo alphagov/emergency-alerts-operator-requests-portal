@@ -23,6 +23,7 @@ resource "aws_lambda_function" "log_upload" {
       LOG_INVITE_TRACKING_TABLE  = aws_dynamodb_table.log_invite_tracking.name
       LOG_UPLOAD_TRACKING_TABLE  = aws_dynamodb_table.log_upload_tracking.name
       MNO_EMAIL_SSM_PREFIX       = var.mno_email_ssm_prefix
+      MNO_ID_SSM_PREFIX          = var.mno_id_ssm_prefix
     }
   }
 

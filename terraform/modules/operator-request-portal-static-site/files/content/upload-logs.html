@@ -4,12 +4,21 @@
 
         <form id="uploadForm">
           <div class="govuk-form-group">
-            <label class="govuk-label" for="tokenInput">One-time upload token</label>
+            <label class="govuk-label" for="mnoInput">MNO identifier</label>
             <input
               type="text"
-              id="tokenInput"
+              id="mnoInput"
+              class="govuk-input govuk-input--width-10"
+              autocomplete="off"
+            >
+          </div>
+          <div class="govuk-form-group">
+            <label class="govuk-label" for="broadcastIdInput">Broadcast ID</label>
+            <input
+              type="text"
+              id="broadcastIdInput"
               class="govuk-input"
-              placeholder="Paste your single use upload token here"
+              autocomplete="off"
             >
           </div>
           <div class="govuk-form-group">
@@ -25,22 +34,28 @@
         </form>
 
         <script>
-          const UPLOAD_BASE = 'https://operator-requests.dev.emergency-alerts.service.gov.uk/received/?data=';
+          const UPLOAD_ORIGIN = 'https://operator-requests.dev.emergency-alerts.service.gov.uk';
 
           document.addEventListener('DOMContentLoaded', () => {
-            const form = document.getElementById('uploadForm');
-            form.addEventListener('submit', async e => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const mnoParam = urlParams.get('mno');
+            const broadcastIdParam = urlParams.get('broadcast_id');
+
+            if (mnoParam) document.getElementById('mnoInput').value = mnoParam;
+            if (broadcastIdParam) document.getElementById('broadcastIdInput').value = broadcastIdParam;
+
+            document.getElementById('uploadForm').addEventListener('submit', async e => {
               e.preventDefault();
 
-              const token = document.getElementById('tokenInput').value.trim();
+              const mnoId = document.getElementById('mnoInput').value.trim();
+              const broadcastId = document.getElementById('broadcastIdInput').value.trim();
               const fileEl = document.getElementById('logFile');
-              if (!token || !fileEl.files.length) {
+
+              if (!mnoId || !broadcastId || !fileEl.files.length) {
                 return window.location.href = 'invalid-request.html';
               }
 
-              // first undo any double-encoding, then re-encode safely
-              const cleanToken = decodeURIComponent(token);
-              const uploadUrl  = UPLOAD_BASE + encodeURIComponent(cleanToken);
+              const uploadUrl = `${UPLOAD_ORIGIN}/log-upload?mno=${encodeURIComponent(mnoId)}&broadcast_id=${encodeURIComponent(broadcastId)}`;
 
               try {
                 const resp = await fetch(uploadUrl, {
@@ -53,28 +68,23 @@
                   return window.location.href = 'upload-success.html';
                 }
 
+                const errType = resp.headers.get('X-Error-Type');
                 switch (resp.status) {
                   case 400:
                     window.location.href = 'invalid-request.html';
                     break;
-
                   case 403:
-                    const err = resp.headers.get('X-Error-Type');
-                    if (err === 'expired_link') {
+                    if (errType === 'expired_link') {
                       window.location.href = 'link-expired.html';
-                    } else if (err === 'already_used') {
+                    } else if (errType === 'already_used') {
                       window.location.href = 'max-limit.html';
-                    } else if (err === 'method_not_allowed') {
-                      window.location.href = 'method-not-allowed.html';
                     } else {
                       window.location.href = 'error.html';
                     }
                     break;
-
                   case 405:
                     window.location.href = 'method-not-allowed.html';
                     break;
-
                   default:
                     window.location.href = 'error.html';
                 }
