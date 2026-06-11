@@ -71,7 +71,7 @@ def mark_invited(mno_id: str, broadcast_id: str):
 
 
 def register_upload_reference(
-    mno_id: str, broadcast_id: str, s3_location: str, mno_name: str
+    mno_id: str, broadcast_id: str, s3_location: str, mno_name: str, alert_time: str
 ) -> bool:
     key = _invite_key(mno_id, broadcast_id)
     expires_at = (datetime.now(timezone.utc) + timedelta(seconds=EXPIRY_SECONDS)).isoformat()
@@ -86,7 +86,8 @@ def register_upload_reference(
                 "S3Location": {"S": s3_location},
                 "MnoId": {"S": mno_id},
                 "MnoName": {"S": mno_name},
-                "BroadcastId": {"S": broadcast_id}
+                "BroadcastId": {"S": broadcast_id},
+                "AlertTime": {"S": alert_time}
             },
             ConditionExpression="attribute_not_exists(RequestId)"
         )
@@ -179,7 +180,8 @@ def lambda_handler(event, context):
 
         s3_location = f"/received/logs/{broadcast_id}/CBC_{broadcast_id}_{portal_id}.zip"
         prepare_folder(broadcast_id)
-        register_upload_reference(portal_id, broadcast_id, s3_location, mno_id)
+        broadcast_start = event.get("broadcast_start", "")
+        register_upload_reference(portal_id, broadcast_id, s3_location, mno_id, broadcast_start)
 
         for email in emails:
             send_invite(email, broadcast_id, mno_id, portal_id)
