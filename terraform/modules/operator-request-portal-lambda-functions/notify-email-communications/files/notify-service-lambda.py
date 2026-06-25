@@ -40,7 +40,9 @@ def lambda_handler(event, context):
     }
     It acts as a 'middleman' by forwarding this payload to Notify and returning a response.
     """
-    logger.info(f"Received event: {json.dumps(event)}")
+    safe_event = {k: v for k, v in event.items() if k != "personalisation"}
+    safe_event["personalisation"] = "[REDACTED]"
+    logger.info(f"Received event: {json.dumps(safe_event)}")
 
     try:
         # Validate required fields
