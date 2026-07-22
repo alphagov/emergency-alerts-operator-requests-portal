@@ -52,6 +52,14 @@ resource "aws_cloudfront_distribution" "cdn" {
         include_body = true
       }
     }
+
+    dynamic "lambda_function_association" {
+      for_each = var.lambda_log_upload_arn != "" ? [1] : []
+      content {
+        event_type = "origin-response"
+        lambda_arn = var.lambda_log_upload_arn
+      }
+    }
   }
 
   ordered_cache_behavior {
@@ -73,6 +81,14 @@ resource "aws_cloudfront_distribution" "cdn" {
         include_body = true
       }
     }
+
+    dynamic "lambda_function_association" {
+      for_each = var.lambda_log_upload_arn != "" ? [1] : []
+      content {
+        event_type = "origin-response"
+        lambda_arn = var.lambda_log_upload_arn
+      }
+    }
   }
 
   ordered_cache_behavior {
@@ -92,6 +108,14 @@ resource "aws_cloudfront_distribution" "cdn" {
         event_type   = "viewer-request"
         lambda_arn   = var.lambda_log_upload_arn
         include_body = true
+      }
+    }
+
+    dynamic "lambda_function_association" {
+      for_each = var.lambda_log_upload_arn != "" ? [1] : []
+      content {
+        event_type = "origin-response"
+        lambda_arn = var.lambda_log_upload_arn
       }
     }
   }
