@@ -1,12 +1,6 @@
 """
 Helper for unit-testing the Lambda/Lambda@Edge handler source files under
 terraform/modules/.../files/*.py.
-
-Those files live under hyphenated (and, for Lambda@Edge, "@"-containing) directory
-names, so they can't be imported as normal Python packages. This loads a given file
-directly from disk with the required environment variables set and `boto3.client`
-patched so that module-level `boto3.client(...)` calls return isolated MagicMocks
-instead of touching real AWS — keeping these tests fully offline.
 """
 
 import importlib.util
@@ -35,12 +29,6 @@ def _temporary_env(env: dict):
 
 
 def load_lambda_module(rel_path: str, module_name: str, env: dict = None) -> ModuleType:
-    """
-    Import the Lambda source file at `rel_path` (relative to the repo root) as a
-    fresh module named `module_name`, with `env` applied to os.environ for the
-    duration of the import and every `boto3.client(...)` call made at import time
-    replaced with a distinct MagicMock.
-    """
     full_path = REPO_ROOT / rel_path
     with _temporary_env(env or {}), mock.patch(
         "boto3.client", side_effect=lambda *args, **kwargs: mock.MagicMock()
