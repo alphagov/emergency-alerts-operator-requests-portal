@@ -40,7 +40,7 @@ def lambda_handler(event, context):
     }
     It acts as a 'middleman' by forwarding this payload to Notify and returning a response.
     """
-    logger.info(f"Received event: {json.dumps(event)}")
+    logger.info(f"Received notify request for template_id={event.get('template_id')}")
 
     try:
         # Validate required fields

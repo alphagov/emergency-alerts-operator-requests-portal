@@ -49,7 +49,7 @@ resource "aws_cloudfront_distribution" "cdn" {
       content {
         event_type   = "viewer-request"
         lambda_arn   = var.lambda_log_upload_arn
-        include_body = true
+        include_body = false
       }
     }
   }
@@ -70,7 +70,7 @@ resource "aws_cloudfront_distribution" "cdn" {
       content {
         event_type   = "viewer-request"
         lambda_arn   = var.lambda_log_upload_arn
-        include_body = true
+        include_body = false
       }
     }
   }
@@ -91,7 +91,7 @@ resource "aws_cloudfront_distribution" "cdn" {
       content {
         event_type   = "viewer-request"
         lambda_arn   = var.lambda_log_upload_arn
-        include_body = true
+        include_body = false
       }
     }
   }
@@ -113,7 +113,7 @@ resource "aws_cloudfront_distribution" "cdn" {
       content {
         event_type   = "viewer-request"
         lambda_arn   = var.lambda_log_download_arn
-        include_body = true
+        include_body = false
       }
     }
   }
