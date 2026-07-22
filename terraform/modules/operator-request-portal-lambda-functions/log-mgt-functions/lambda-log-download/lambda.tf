@@ -15,7 +15,6 @@ resource "aws_lambda_function" "notify_on_upload" {
 
   environment {
     variables = {
-      LOG_BUCKET                = var.log_bucket
       DOWNLOAD_DOMAIN           = var.download_domain
       NOTIFY_LAMBDA_ARN         = var.notify_lambda_arn
       NOTIFY_TEMPLATE_ID        = var.notify_template_id

@@ -145,8 +145,13 @@ module "notify_email_communications" {
 module "lambda_log_download" {
   source = "../../modules/operator-request-portal-lambda-functions/log-mgt-functions/lambda-log-download"
 
-  environment               = local.environment
-  log_bucket                = local.log_bucket_name
+  environment = local.environment
+  # CloudFront's upload/download cache behaviors all target the static-site bucket as
+  # their origin (see cloudfront.tf) — uploaded CBC logs physically land there, not in
+  # the separate aws_s3_bucket.log_bucket resource. This must point at the bucket
+  # CloudFront actually writes to, both for S3 read access and for the S3->Lambda
+  # invoke permission to match the real bucket notification.
+  log_bucket                = module.operator_request_portal_static_site.s3_bucket_name
   download_domain           = local.domain_name
   notify_lambda_arn         = module.notify_email_communications.notify_lambda_function_arn
   notify_template_id        = local.notify_templates.log_download
