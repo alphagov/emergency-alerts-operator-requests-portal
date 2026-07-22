@@ -24,8 +24,7 @@
         ></div>
 
         <script>
-          const DOWNLOAD_BASE =
-            "https://test-site.dev.emergency-alerts.service.gov.uk/download/?data=";
+          const DOWNLOAD_BASE = `${window.location.origin}/download/?data=`;
 
           document.addEventListener("DOMContentLoaded", () => {
             const form = document.getElementById("downloadForm");
