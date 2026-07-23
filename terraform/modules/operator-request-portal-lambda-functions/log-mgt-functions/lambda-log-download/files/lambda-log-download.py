@@ -38,12 +38,7 @@ def _is_zip_content(bucket: str, key: str) -> bool:
     """
     Validate the object looks like a genuine ZIP archive: a leading local/empty-archive
     file header signature, plus an End Of Central Directory record near the tail of the
-    file. This is not full archive parsing, but catches non-ZIP content and truncated
-    uploads that a header-only check would miss.
-
-    `bucket` is taken from the triggering S3 event record rather than a configured
-    bucket name, since the event is the only source guaranteed to name the bucket
-    the object actually landed in.
+    file.
     """
     try:
         size = s3.head_object(Bucket=bucket, Key=key)["ContentLength"]
