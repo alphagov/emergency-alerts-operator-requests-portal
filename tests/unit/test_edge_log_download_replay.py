@@ -1,6 +1,5 @@
 """
-Covers finding [16]: "Operator log download tokens can be replayed until expiry
-despite one-time semantics". A second GET with a copied/leaked-but-unexpired token
+A second GET with a copied/leaked-but-unexpired token
 must be rejected once the first download has been recorded.
 """
 
