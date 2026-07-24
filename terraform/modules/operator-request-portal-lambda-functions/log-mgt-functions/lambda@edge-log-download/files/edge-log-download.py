@@ -121,15 +121,19 @@ def _increment_download(reference: str):
             TableName=TRACK_TABLE,
             Key={"RequestId": {"S": reference}},
             UpdateExpression=update_expr,
+            ConditionExpression="attribute_not_exists(#u) OR #u = :false",
             ExpressionAttributeNames={"#u": "Used"},
             ExpressionAttributeValues={
                 ":zero": {"N": "0"},
                 ":one": {"N": "1"},
                 ":true": {"BOOL": True},
+                ":false": {"BOOL": False},
                 ":now": {"S": datetime.now(timezone.utc).isoformat()}
             }
         )
         return None
+    except ddb.exceptions.ConditionalCheckFailedException:
+        return error_response(403, "Forbidden", "This download link has already been used", "already_used")
     except Exception as e:
         logger.error("Failed to update download count for %s: %s", _mask_reference(reference), e)
         return error_response(500, "Internal Server Error", "Could not track download")
