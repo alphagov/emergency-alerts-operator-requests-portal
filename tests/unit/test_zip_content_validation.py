@@ -1,6 +1,5 @@
 """
-Covers finding [21]: "Operator uploaded log object is not constrained to ZIP content
-before distribution". Non-ZIP/truncated uploads must not be turned into a download
+Non-ZIP/truncated uploads must not be turned into a download
 link + team notification.
 """
 
@@ -84,8 +83,7 @@ def test_empty_object_is_rejected():
 
 def test_is_zip_content_reads_from_the_bucket_named_in_the_event_not_a_hardcoded_one():
     """Regression test: the bucket to inspect must come from the triggering S3 event
-    record, not a fixed/env-configured bucket name — the object may not live in the
-    bucket a LOG_BUCKET-style env var assumes."""
+    record, not a fixed/env-configured bucket name."""
     module = _load()
     _mock_s3_object(module, _make_zip_bytes())
 
