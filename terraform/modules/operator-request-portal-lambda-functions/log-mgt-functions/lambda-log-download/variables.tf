@@ -4,7 +4,7 @@ variable "environment" {
 }
 
 variable "log_bucket" {
-  description = "Name of the S3 bucket where CBC logs land"
+  description = "Name of the S3 bucket CloudFront actually writes uploaded CBC logs to (the static-site/origin bucket), used for S3 read access and the S3->Lambda invoke permission"
   type        = string
 }
 
