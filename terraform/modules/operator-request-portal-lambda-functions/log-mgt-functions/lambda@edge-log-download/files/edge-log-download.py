@@ -37,6 +37,14 @@ def _pad(b64: str) -> str:
     return b64 + "=" * (4 - len(b64) % 4) if len(b64) % 4 else b64
 
 
+def _mask_reference(reference: str) -> str:
+    """Log-safe form of a reference: keeps the alert prefix, masks the high-entropy token suffix."""
+    alert, sep, token_id = reference.rpartition("-")
+    if not sep:
+        return "***"
+    return f"{alert}-***"
+
+
 def _decode_token(token: str):
     raw_b64 = _pad(token)
     try:
@@ -77,7 +85,7 @@ def _check_expiry(kv: dict):
         return error_response(400, "Bad Request", "Invalid expiry format", "invalid_expiry")
 
     if datetime.now(timezone.utc) > exp:
-        logger.warning("Expired token for reference: %s", kv["reference"])
+        logger.warning("Expired token for reference: %s", _mask_reference(kv["reference"]))
         return error_response(403, "Forbidden", "This download link has expired", "expired_link")
 
     return None
@@ -87,17 +95,17 @@ def _get_tracking_record(reference: str, raw_b64: str):
     try:
         resp = ddb.get_item(TableName=TRACK_TABLE, Key={"RequestId": {"S": reference}})
     except Exception as e:
-        logger.error("DynamoDB get_item failed for %s: %s", reference, e)
+        logger.error("DynamoDB get_item failed for %s: %s", _mask_reference(reference), e)
         return None, error_response(403, "Forbidden", "Invalid reference", "invalid_token")
 
     item = resp.get("Item")
     if not item:
-        logger.warning("No tracking record found for reference: %s", reference)
+        logger.warning("No tracking record found for reference: %s", _mask_reference(reference))
         return None, error_response(403, "Forbidden", "Invalid reference", "invalid_token")
 
     stored_token = item.get("RawDownloadToken", {}).get("S")
     if stored_token is None or stored_token != raw_b64:
-        logger.warning("Token mismatch for reference: %s", reference)
+        logger.warning("Token mismatch for reference: %s", _mask_reference(reference))
         return None, error_response(403, "Forbidden", "Invalid token", "invalid_token")
 
     return item, None
@@ -123,7 +131,7 @@ def _increment_download(reference: str):
         )
         return None
     except Exception as e:
-        logger.error("Failed to update download count for %s: %s", reference, e)
+        logger.error("Failed to update download count for %s: %s", _mask_reference(reference), e)
         return error_response(500, "Internal Server Error", "Could not track download")
 
 
@@ -171,6 +179,6 @@ def lambda_handler(event, context):
     req["uri"] = s3_path
 
     logger.info(
-        "Download authorized: ref=%s path=%s count=%d", reference, s3_path, download_count
+        "Download authorized: alert=%s mno=%s count=%d", alert, mno, download_count
     )
     return req

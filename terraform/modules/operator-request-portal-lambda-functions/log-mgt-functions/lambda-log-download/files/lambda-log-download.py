@@ -29,6 +29,14 @@ KEY_RE = re.compile(
 )
 
 
+def _mask_email(email: str) -> str:
+    local, _, domain = email.partition("@")
+    if not domain:
+        return "***"
+    masked_local = f"{local[0]}***" if local else "***"
+    return f"{masked_local}@{domain}"
+
+
 def _get_mno_name(portal_id: str, broadcast_id: str) -> str:
     """
     Look up the MNO name from the upload tracking record.
@@ -104,7 +112,9 @@ def send_notification(broadcast_id: str, portal_id: str, download_link: str):
             InvocationType="Event",
             Payload=json.dumps(payload).encode("utf-8")
         )
-        logger.info("Sent download link for %s/%s to %s", broadcast_id, mno_name, email)
+        logger.info(
+            "Sent download link for %s/%s to %s", broadcast_id, mno_name, _mask_email(email)
+        )
 
 
 def lambda_handler(event, context):

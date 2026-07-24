@@ -48,6 +48,14 @@ def _get_mno_emails(mno_id: str) -> list[str]:
         return []
 
 
+def _mask_email(email: str) -> str:
+    local, _, domain = email.partition("@")
+    if not domain:
+        return "***"
+    masked_local = f"{local[0]}***" if local else "***"
+    return f"{masked_local}@{domain}"
+
+
 def _invite_key(mno_id: str, broadcast_id: str) -> str:
     return f"{mno_id}#{broadcast_id}"
 
@@ -131,9 +139,11 @@ def send_invite(email: str, broadcast_id: str, mno_name: str, portal_id: str):
             InvocationType="Event",
             Payload=json.dumps(payload).encode("utf-8")
         )
-        logger.info(f"Sent invite to {email} for MNO {mno_name} ({portal_id}) broadcast {broadcast_id}")
+        logger.info(
+            f"Sent invite to {_mask_email(email)} for MNO {mno_name} ({portal_id}) broadcast {broadcast_id}"
+        )
     except Exception as e:
-        logger.error(f"Error sending invite to {email}: {e}")
+        logger.error(f"Error sending invite to {_mask_email(email)}: {e}")
 
 
 def lambda_handler(event, context):
@@ -154,9 +164,9 @@ def lambda_handler(event, context):
     6-character portal identifier from SSM. The portal identifier is used in upload
     URLs and DynamoDB keys; it never appears in the event payload.
     """
-    logger.info(f"Processing upload invite event: {json.dumps(event)}")
-
     alert_ref = event["alert_reference"]
+    logger.info(f"Processing upload invite event: alert_reference={alert_ref}, mno_count={len(event.get('mnos', []))}")
+
     invites_sent = []
 
     for mno in event.get("mnos", []):
