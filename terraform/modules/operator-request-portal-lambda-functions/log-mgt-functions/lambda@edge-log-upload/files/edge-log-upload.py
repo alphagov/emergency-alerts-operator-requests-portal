@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 from datetime import datetime, timezone
 from urllib.parse import parse_qs
@@ -13,6 +14,10 @@ TRACK_TABLE = "operator-request-portal-log-uploads"
 ddb = boto3.client(
     "dynamodb",
     region_name=os.environ.get("DYNAMODB_REGION", "eu-west-2")
+)
+
+S3_KEY_RE = re.compile(
+    r"^/received/logs/(?P<broadcast>[^/]+)/CBC_(?P=broadcast)_(?P<mno>[^.]+)\.zip$"
 )
 
 
@@ -85,9 +90,8 @@ def _mark_used(composite_key: str):
         return error_response(500, "Internal Server Error", "Processing error", "internal_error")
 
 
-def lambda_handler(event, context):
-    logger.info("Lambda@Edge invoked. Event: %s", event)
-    req = event["Records"][0]["cf"]["request"]
+def _handle_viewer_request(req):
+    logger.info("Lambda@Edge invoked: method=%s uri=%s", req.get("method"), req.get("uri"))
 
     if req.get("method") != "PUT":
         return error_response(403, "Forbidden", "Only PUT is allowed", "method_not_allowed")
@@ -115,10 +119,6 @@ def lambda_handler(event, context):
     if item.get("Used", {}).get("BOOL", False):
         return error_response(403, "Forbidden", "This link has already been used", "already_used")
 
-    err = _mark_used(composite_key)
-    if err:
-        return err
-
     s3_location = item.get("S3Location", {}).get("S")
     if not s3_location:
         logger.error("No S3Location in tracking record for %s", composite_key)
@@ -126,5 +126,46 @@ def lambda_handler(event, context):
 
     req["uri"] = s3_location
     req["querystring"] = ""
-    logger.info("Upload allowed: uri=%s (mno=%s, broadcast_id=%s)", req["uri"], mno_id, broadcast_id)
+    logger.info(
+        "Upload validated, forwarding to origin: uri=%s (mno=%s, broadcast_id=%s)",
+        req["uri"], mno_id, broadcast_id
+    )
     return req
+
+
+def _handle_origin_response(request, response):
+    status = response.get("status", "")
+    match = S3_KEY_RE.match(request.get("uri", ""))
+    if not match:
+        return response
+
+    mno_id, broadcast_id = match.group("mno"), match.group("broadcast")
+    composite_key = f"{mno_id}#{broadcast_id}"
+
+    if not status.startswith("2"):
+        logger.warning(
+            "Origin write failed (status=%s) for mno=%s broadcast_id=%s; upload link left unused for retry",
+            status, mno_id, broadcast_id
+        )
+        return response
+
+    err = _mark_used(composite_key)
+    if err:
+        logger.error("Failed to mark upload link used after successful write for %s", composite_key)
+    else:
+        logger.info("Upload confirmed, link marked used: mno=%s broadcast_id=%s", mno_id, broadcast_id)
+    return response
+
+
+def lambda_handler(event, context):
+    cf = event["Records"][0]["cf"]
+    event_type = cf["config"]["eventType"]
+
+    if event_type == "viewer-request":
+        return _handle_viewer_request(cf["request"])
+
+    if event_type == "origin-response":
+        return _handle_origin_response(cf["request"], cf["response"])
+
+    logger.warning("Unhandled event type: %s", event_type)
+    return cf.get("response") or cf["request"]
