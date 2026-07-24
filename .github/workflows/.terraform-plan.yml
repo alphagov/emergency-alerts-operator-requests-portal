@@ -118,6 +118,7 @@ jobs:
           zip -r ${{ inputs.artifact_prefix }}operator-requests-${{ inputs.environment }}.zip \
             .terraform \
             .terraform.lock.hcl \
+            .terraform-assets \
             ${{ inputs.artifact_prefix }}operator-requests-${{ inputs.environment }}.tfplan
 
       - name: Upload Artifact
