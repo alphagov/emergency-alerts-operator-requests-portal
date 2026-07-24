@@ -34,7 +34,7 @@
         </form>
 
         <script>
-          const UPLOAD_ORIGIN = 'https://operator-requests.dev.emergency-alerts.service.gov.uk';
+          const UPLOAD_ORIGIN = window.location.origin;
 
           document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
