@@ -1,6 +1,5 @@
 """
-Covers finding [15]: "Operator log upload links are consumed before the S3 upload
-succeeds". A failed/interrupted first PUT must not burn the one-time upload link —
+A failed/interrupted first PUT must not burn the one-time upload link —
 the link should only be marked used once the origin (S3) confirms a successful write.
 """
 
