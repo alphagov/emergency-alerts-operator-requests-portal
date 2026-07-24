@@ -1,6 +1,5 @@
 """
-Covers finding [14]: "Operator portal logs upload and download bearer URLs and may
-log uploaded log bodies". Asserts sensitive fields (recipient emails, bearer/download
+Asserts sensitive fields (recipient emails, bearer/download
 tokens) never appear verbatim in log output, only their masked form.
 """
 
