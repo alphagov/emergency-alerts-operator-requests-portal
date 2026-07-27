@@ -85,8 +85,8 @@ def mark_invited(mno_id: str, broadcast_id: str):
 
 def generate_upload_token() -> str:
     """
-    Unguessable identifier used as both the DynamoDB partition key
-    and the sole upload-authorisation credential
+    Identifier used as both the DynamoDB partition key
+    and the upload-authorisation credential
     """
     return secrets.token_urlsafe(32)
 

@@ -147,7 +147,7 @@ def test_viewer_request_derives_identifiers_from_the_record_not_the_client():
         }
     }
 
-    # Even if the querystring also carried a spoofed mno/broadcast_id, it's ignored —
+    # Even if the querystring also carried a spoofed mno/broadcast_id, it's ignored
     # only the token is parsed and the record's own attributes are trusted.
     req = {"method": "PUT", "querystring": "token=valid-token&mno=SPOOFED&broadcast_id=spoofed-id"}
     result = module._handle_viewer_request(req)

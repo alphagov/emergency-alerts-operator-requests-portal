@@ -12,7 +12,7 @@ MODULE_PATH = (
 
 MNO_ID = "MNO1"
 BROADCAST_ID = "broadcast-123"
-TOKEN = "a" * 43  # same shape as secrets.token_urlsafe(32)
+TOKEN = "a" * 43
 
 
 def _s3_uri(mno=MNO_ID, broadcast=BROADCAST_ID):

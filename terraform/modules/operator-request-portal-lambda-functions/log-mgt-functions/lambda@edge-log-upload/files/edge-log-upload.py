@@ -95,7 +95,6 @@ def _mark_used(token: str):
 
 
 def _validate_token(token: str):
-    """Returns (item, error_response) — exactly one of the pair will be None."""
     if not token:
         return None, error_response(400, "Bad Request", "Missing token parameter", "missing_token")
 
@@ -132,7 +131,6 @@ def _handle_viewer_request(req):
         logger.error("No S3Location in tracking record for %s", _mask_token(token))
         return error_response(500, "Internal Server Error", "Missing upload destination", "internal_error")
 
-    # Trusted identifiers come from the server-side record, never from client input.
     mno_id = item.get("MnoId", {}).get("S")
     broadcast_id = item.get("BroadcastId", {}).get("S")
 
