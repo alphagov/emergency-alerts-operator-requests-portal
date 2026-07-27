@@ -39,7 +39,7 @@ jobs:
 
       - name: Read Terraform Version
         id: tf_version
-        run: echo "version=$(cat .terraform-version)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(cat ${{ github.workspace }}/.terraform-version)" >> "$GITHUB_OUTPUT"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
@@ -49,7 +49,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Download Artifact
         uses: actions/download-artifact@v8
