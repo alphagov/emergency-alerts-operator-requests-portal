@@ -14,7 +14,7 @@ resource "aws_lambda_function" "notify_service_lambda" {
   source_code_hash = data.archive_file.notify_service_zip.output_base64sha256
   timeout          = 30
   memory_size      = 128
-  layers      = [aws_lambda_layer_version.notify_layer.arn]
+  layers           = [aws_lambda_layer_version.notify_layer.arn]
 
   environment {
     variables = {
