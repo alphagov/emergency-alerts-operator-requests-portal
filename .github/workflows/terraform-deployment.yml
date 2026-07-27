@@ -27,16 +27,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v7
 
-      - name: Setup Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.13'
-
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: python3.13 -m pip install -r requirements.txt
 
       - name: Run unit tests
-        run: pytest tests/unit -v
+        run: python3.13 -m pytest tests/unit -v
 
   plan-development:
     needs: unit-tests
