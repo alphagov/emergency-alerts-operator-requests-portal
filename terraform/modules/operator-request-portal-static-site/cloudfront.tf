@@ -5,6 +5,25 @@ resource "aws_cloudfront_origin_access_control" "oac" {
   signing_protocol                  = "sigv4"
 }
 
+resource "aws_cloudfront_origin_request_policy" "upload_token_header" {
+  name = format("%s-upload-token-header", local.bucket_name)
+
+  cookies_config {
+    cookie_behavior = "none"
+  }
+
+  headers_config {
+    header_behavior = "whitelist"
+    headers {
+      items = ["X-Upload-Token"]
+    }
+  }
+
+  query_strings_config {
+    query_string_behavior = "none"
+  }
+}
+
 resource "aws_cloudfront_distribution" "cdn" {
   enabled             = true
   comment             = format("CloudFront distribution for %s", local.bucket_name)
@@ -41,8 +60,9 @@ resource "aws_cloudfront_distribution" "cdn" {
     allowed_methods = ["GET", "HEAD", "PUT", "OPTIONS", "DELETE", "POST", "PATCH"]
     cached_methods  = ["GET", "HEAD"]
 
-    compress        = true
-    cache_policy_id = data.aws_cloudfront_cache_policy.caching_disabled.id
+    compress                 = true
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.upload_token_header.id
 
     dynamic "lambda_function_association" {
       for_each = var.lambda_log_upload_arn != "" ? [1] : []
@@ -70,8 +90,9 @@ resource "aws_cloudfront_distribution" "cdn" {
     allowed_methods = ["GET", "HEAD", "PUT", "OPTIONS", "DELETE", "POST", "PATCH"]
     cached_methods  = ["GET", "HEAD"]
 
-    compress        = true
-    cache_policy_id = data.aws_cloudfront_cache_policy.caching_disabled.id
+    compress                 = true
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.upload_token_header.id
 
     dynamic "lambda_function_association" {
       for_each = var.lambda_log_upload_arn != "" ? [1] : []
@@ -99,8 +120,9 @@ resource "aws_cloudfront_distribution" "cdn" {
     allowed_methods = ["GET", "HEAD", "PUT", "OPTIONS", "DELETE", "POST", "PATCH"]
     cached_methods  = ["GET", "HEAD"]
 
-    compress        = true
-    cache_policy_id = data.aws_cloudfront_cache_policy.caching_disabled.id
+    compress                 = true
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.upload_token_header.id
 
     dynamic "lambda_function_association" {
       for_each = var.lambda_log_upload_arn != "" ? [1] : []

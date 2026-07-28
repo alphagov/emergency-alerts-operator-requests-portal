@@ -5,40 +5,35 @@
         <p class="govuk-body">
           Uploading of CBC log files can be completed easily through the
           <a href="upload-logs.html" class="govuk-link">Operator Portal upload page</a>
-          by entering Mobile Operator and Broadcast ID details, and selecting your CBC log archive to upload.
-          It is also possible to complete your upload directly from a command line, which will allow automated
-          log uploads to be completed if this is preferred.
+          by opening the link from your invite email and selecting your CBC log archive
+          to upload. It is also possible to complete your upload directly from a
+          command line, which will allow automated log uploads to be completed if this
+          is preferred.
         </p>
 
         <p class="govuk-body">
-          The URL to use for the upload can be constructed by adding the Mobile Operator identification code
-          you have been allocated, and the unique Broadcast identification code for the logs you wish to upload
-          (the UUID your CBC endpoint generated when accepting the broadcast request).
-          As an example, assuming these details:
+          The upload URL is the exact link included in your invite email — it contains
+          a unique, one-time upload token that identifies your broadcast and cannot be
+          constructed or guessed from the Mobile Operator or Broadcast identification
+          codes alone. As an example, if the link in your invite email were:
         </p>
 
-        <dl class="govuk-summary-list">
-          <div class="govuk-summary-list__row">
-            <dt class="govuk-summary-list__key">Mobile Operator identification code</dt>
-            <dd class="govuk-summary-list__value"><code>T78QW4</code></dd>
-          </div>
-          <div class="govuk-summary-list__row">
-            <dt class="govuk-summary-list__key">Broadcast identification code</dt>
-            <dd class="govuk-summary-list__value"><code>38c0d9e5-6782-4952-a11d-9097636f1f10</code></dd>
-          </div>
-        </dl>
-
-        <p class="govuk-body">The corresponding upload URL would be:</p>
-
-        <pre class="govuk-body" style="background:#f3f2f1;padding:1em;overflow-x:auto;">https://operator-requests.emergency-alerts.service.gov.uk/log-upload?mno=T78QW4&amp;broadcast_id=38c0d9e5-6782-4952-a11d-9097636f1f10</pre>
+        <pre class="govuk-body" style="background:#f3f2f1;padding:1em;overflow-x:auto;">https://operator-requests.emergency-alerts.service.gov.uk/upload-logs.html?token=Rl2f9K...</pre>
 
         <p class="govuk-body">
-          There are a number of tools which could be used to submit logs from the command line.
-          As an example using cURL, and assuming a local zip archive of CBC logs called
-          <code>CBC-Log-Files.zip</code>, the command line upload using the identification details above would be:
+          There are a number of tools which could be used to submit logs from the command
+          line. As an example using cURL, and assuming a local zip archive of CBC logs
+          called <code>CBC-Log-Files.zip</code>, the command line upload using the token
+          from the link above would be:
         </p>
 
-        <pre class="govuk-body" style="background:#f3f2f1;padding:1em;overflow-x:auto;">curl --request PUT --upload-file CBC-Log-Files.zip 'https://operator-requests.emergency-alerts.service.gov.uk/log-upload?mno=T78QW4&amp;broadcast_id=38c0d9e5-6782-4952-a11d-9097636f1f10'</pre>
+        <pre class="govuk-body" style="background:#f3f2f1;padding:1em;overflow-x:auto;">curl --request PUT --upload-file CBC-Log-Files.zip 'https://operator-requests.emergency-alerts.service.gov.uk/log-upload?token=Rl2f9K...'</pre>
+
+        <p class="govuk-body">
+          Treat the upload token as a secret: anyone who obtains it can upload logs for
+          your broadcast until it is used or expires. Do not share invite emails or
+          forward upload links outside your organisation.
+        </p>
 
         <p class="govuk-body">
           Log file archive uploads must include logs from both the start and cancel operations, and must be
