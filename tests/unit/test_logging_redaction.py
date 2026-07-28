@@ -55,7 +55,7 @@ def test_upload_invite_send_masks_recipient_email(caplog):
     with caplog.at_level("INFO"), mock.patch(
         "boto3.client", side_effect=lambda *a, **k: mock.MagicMock()
     ):
-        module.send_invite(SENSITIVE_EMAIL, "broadcast-1", "Test MNO", "MNO1")
+        module.send_invite(SENSITIVE_EMAIL, "dummy-token", "broadcast-1", "Test MNO", "MNO1")
 
     log_text = _log_text(caplog)
     assert SENSITIVE_EMAIL not in log_text

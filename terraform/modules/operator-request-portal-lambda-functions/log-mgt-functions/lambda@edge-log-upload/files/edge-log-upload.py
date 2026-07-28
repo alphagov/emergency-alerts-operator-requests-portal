@@ -20,6 +20,8 @@ S3_KEY_RE = re.compile(
     r"^/received/logs/(?P<broadcast>[^/]+)/CBC_(?P=broadcast)_(?P<mno>[^.]+)\.zip$"
 )
 
+TOKEN_HEADER_NAME = "x-upload-token"
+
 
 def error_response(status_code: int, status_desc: str, body: str, error_type: str = None) -> dict:
     headers = {
@@ -37,19 +39,21 @@ def error_response(status_code: int, status_desc: str, body: str, error_type: st
     }
 
 
-def _parse_params(qs: str):
+def _mask_token(token: str) -> str:
+    return f"{token[:6]}..." if len(token) > 6 else "***"
+
+
+def _parse_token(qs: str):
     params = parse_qs(qs)
-    mno_id = params.get("mno", [None])[0]
-    broadcast_id = params.get("broadcast_id", [None])[0]
-    return mno_id, broadcast_id
+    return params.get("token", [None])[0]
 
 
-def _get_tracking_record(composite_key: str):
+def _get_tracking_record(token: str):
     try:
-        resp = ddb.get_item(TableName=TRACK_TABLE, Key={"RequestId": {"S": composite_key}})
+        resp = ddb.get_item(TableName=TRACK_TABLE, Key={"RequestId": {"S": token}})
         return resp.get("Item"), None
     except Exception as e:
-        logger.error("DynamoDB get_item failed for %s: %s", composite_key, e)
+        logger.error("DynamoDB get_item failed for %s: %s", _mask_token(token), e)
         return None, error_response(403, "Forbidden", "Invalid request", "invalid_request")
 
 
@@ -68,11 +72,11 @@ def _check_expiry(item: dict):
     return None
 
 
-def _mark_used(composite_key: str):
+def _mark_used(token: str):
     try:
         ddb.update_item(
             TableName=TRACK_TABLE,
-            Key={"RequestId": {"S": composite_key}},
+            Key={"RequestId": {"S": token}},
             UpdateExpression="SET #u = :true, UsedAt = :now",
             ConditionExpression="attribute_not_exists(#u) OR #u = :false",
             ExpressionAttributeNames={"#u": "Used"},
@@ -86,8 +90,29 @@ def _mark_used(composite_key: str):
     except ddb.exceptions.ConditionalCheckFailedException:
         return error_response(403, "Forbidden", "This link has already been used", "already_used")
     except Exception as e:
-        logger.error("DynamoDB error marking upload used for %s: %s", composite_key, e)
+        logger.error("DynamoDB error marking upload used for %s: %s", _mask_token(token), e)
         return error_response(500, "Internal Server Error", "Processing error", "internal_error")
+
+
+def _validate_token(token: str):
+    if not token:
+        return None, error_response(400, "Bad Request", "Missing token parameter", "missing_token")
+
+    item, err = _get_tracking_record(token)
+    if err:
+        return None, err
+    if not item:
+        logger.warning("No tracking record for token=%s", _mask_token(token))
+        return None, error_response(403, "Forbidden", "Invalid or unknown upload token", "invalid_request")
+
+    err = _check_expiry(item)
+    if err:
+        return None, err
+
+    if item.get("Used", {}).get("BOOL", False):
+        return None, error_response(403, "Forbidden", "This link has already been used", "already_used")
+
+    return item, None
 
 
 def _handle_viewer_request(req):
@@ -96,36 +121,24 @@ def _handle_viewer_request(req):
     if req.get("method") != "PUT":
         return error_response(403, "Forbidden", "Only PUT is allowed", "method_not_allowed")
 
-    mno_id, broadcast_id = _parse_params(req.get("querystring", ""))
-
-    if not mno_id:
-        return error_response(400, "Bad Request", "Missing mno parameter", "missing_mno")
-    if not broadcast_id:
-        return error_response(400, "Bad Request", "Missing broadcast_id parameter", "missing_broadcast_id")
-
-    composite_key = f"{mno_id}#{broadcast_id}"
-
-    item, err = _get_tracking_record(composite_key)
+    token = _parse_token(req.get("querystring", ""))
+    item, err = _validate_token(token)
     if err:
         return err
-    if not item:
-        logger.warning("No tracking record for mno=%s broadcast_id=%s", mno_id, broadcast_id)
-        return error_response(403, "Forbidden", "Invalid mno or broadcast_id", "invalid_request")
-
-    err = _check_expiry(item)
-    if err:
-        return err
-
-    if item.get("Used", {}).get("BOOL", False):
-        return error_response(403, "Forbidden", "This link has already been used", "already_used")
 
     s3_location = item.get("S3Location", {}).get("S")
     if not s3_location:
-        logger.error("No S3Location in tracking record for %s", composite_key)
+        logger.error("No S3Location in tracking record for %s", _mask_token(token))
         return error_response(500, "Internal Server Error", "Missing upload destination", "internal_error")
+
+    mno_id = item.get("MnoId", {}).get("S")
+    broadcast_id = item.get("BroadcastId", {}).get("S")
 
     req["uri"] = s3_location
     req["querystring"] = ""
+    req.setdefault("headers", {})[TOKEN_HEADER_NAME] = [
+        {"key": "X-Upload-Token", "value": token}
+    ]
     logger.info(
         "Upload validated, forwarding to origin: uri=%s (mno=%s, broadcast_id=%s)",
         req["uri"], mno_id, broadcast_id
@@ -135,23 +148,27 @@ def _handle_viewer_request(req):
 
 def _handle_origin_response(request, response):
     status = response.get("status", "")
-    match = S3_KEY_RE.match(request.get("uri", ""))
-    if not match:
+
+    token_header = request.get("headers", {}).get(TOKEN_HEADER_NAME)
+    if not token_header:
+        return response
+    token = token_header[0].get("value")
+    if not token:
         return response
 
-    mno_id, broadcast_id = match.group("mno"), match.group("broadcast")
-    composite_key = f"{mno_id}#{broadcast_id}"
+    match = S3_KEY_RE.match(request.get("uri", ""))
+    mno_id, broadcast_id = (match.group("mno"), match.group("broadcast")) if match else (None, None)
 
     if not status.startswith("2"):
         logger.warning(
-            "Origin write failed (status=%s) for mno=%s broadcast_id=%s; upload link left unused for retry",
-            status, mno_id, broadcast_id
+            "Origin write failed (status=%s) for token=%s (mno=%s, broadcast_id=%s); upload link left unused for retry",
+            status, _mask_token(token), mno_id, broadcast_id
         )
         return response
 
-    err = _mark_used(composite_key)
+    err = _mark_used(token)
     if err:
-        logger.error("Failed to mark upload link used after successful write for %s", composite_key)
+        logger.error("Failed to mark upload link used after successful write for token=%s", _mask_token(token))
     else:
         logger.info("Upload confirmed, link marked used: mno=%s broadcast_id=%s", mno_id, broadcast_id)
     return response
