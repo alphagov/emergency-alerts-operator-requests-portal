@@ -6,17 +6,35 @@ on:
       - main
     paths:
       - "terraform/**"
+      - "tests/**"
+      - "requirements.txt"
       - ".github/workflows/**"
   pull_request:
     branches:
       - main
     paths:
       - "terraform/**"
+      - "tests/**"
+      - "requirements.txt"
       - ".github/workflows/**"
   workflow_dispatch:
 
 jobs:
+  unit-tests:
+    runs-on: self-hosted
+    name: unit-tests
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Install dependencies
+        run: python3.13 -m pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: python3.13 -m pytest tests/unit -v
+
   plan-development:
+    needs: unit-tests
     uses: ./.github/workflows/.terraform-plan.yml
     with:
       environment: development
