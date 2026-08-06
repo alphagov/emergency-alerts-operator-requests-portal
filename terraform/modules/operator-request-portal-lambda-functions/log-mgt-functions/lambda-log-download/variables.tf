@@ -8,8 +8,8 @@ variable "log_bucket" {
   type        = string
 }
 
-variable "download_domain" {
-  description = "Domain for downloads (CloudFront alias)"
+variable "gds_aws_profile" {
+  description = "GDS AWS profile name used in the CLI download command sent to the alerts team"
   type        = string
 }
 
@@ -28,13 +28,7 @@ variable "alerts_team_emails" {
   type        = string
 }
 
-variable "download_link_expiry_days" {
-  description = "Validity of download links in days"
-  type        = number
-  default     = 30
-}
-
-variable "log_upload_tracking_table" {
-  description = "Name of the DynamoDB table used to track log upload invites (for MNO name lookup)"
+variable "log_invite_tracking_table" {
+  description = "Name of the DynamoDB table used to track log upload invites (for MNO name and alert time lookup)"
   type        = string
 }

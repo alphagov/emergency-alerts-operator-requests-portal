@@ -15,12 +15,10 @@ MODULE_PATH = (
 )
 
 ENV = {
-    "DOWNLOAD_DOMAIN": "download.example.gov.uk",
+    "GDS_AWS_PROFILE": "emergency-alerts-test",
     "NOTIFY_LAMBDA_ARN": "arn:aws:lambda:eu-west-2:123456789012:function:notify",
     "NOTIFY_TEMPLATE_ID": "template-id",
-    "DOWNLOAD_TRACKING_TABLE": "download-tracking",
-    "LOG_UPLOAD_TRACKING_TABLE": "upload-tracking",
-    "DOWNLOAD_LINK_EXPIRY_DAYS": "7",
+    "LOG_INVITE_TRACKING_TABLE": "invite-tracking",
     "ALERTS_TEAM_EMAILS": "alerts@example.gov.uk",
 }
 
@@ -96,7 +94,7 @@ def test_is_zip_content_reads_from_the_bucket_named_in_the_event_not_a_hardcoded
         assert call.kwargs["Bucket"] == BUCKET
 
 
-def test_lambda_handler_skips_non_zip_upload_and_generates_no_download_link():
+def test_lambda_handler_skips_non_zip_upload_and_sends_no_notification():
     module = _load()
     _mock_s3_object(module, b"not a zip")
 
@@ -113,14 +111,13 @@ def test_lambda_handler_skips_non_zip_upload_and_generates_no_download_link():
 
     module.lambda_handler(event, None)
 
-    module.ddb.put_item.assert_not_called()
     module.lambda_cli.invoke.assert_not_called()
 
 
-def test_lambda_handler_generates_download_link_for_valid_zip():
+def test_lambda_handler_sends_notification_for_valid_zip():
     module = _load()
     _mock_s3_object(module, _make_zip_bytes())
-    module.ddb.get_item.return_value = {"Item": {}}
+    module.ddb.get_item.return_value = {"Item": {"MnoName": {"S": "Test MNO"}, "AlertTime": {"S": ""}}}
 
     event = {
         "Records": [
@@ -135,7 +132,6 @@ def test_lambda_handler_generates_download_link_for_valid_zip():
 
     module.lambda_handler(event, None)
 
-    module.ddb.put_item.assert_called_once()
     module.lambda_cli.invoke.assert_called_once()
     module.s3.head_object.assert_called_once_with(
         Bucket=BUCKET, Key="received/logs/alert-1/CBC_alert-1_MNO1.zip"

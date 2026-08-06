@@ -29,12 +29,6 @@ variable "infra_mgt_state_region" {
 }
 
 # Application-specific configuration
-variable "download_link_expiry_days" {
-  description = "Number of days download links remain valid"
-  type        = number
-  default     = 30
-}
-
 variable "upload_link_expiry_seconds" {
   description = "Number of seconds upload links remain valid"
   type        = number

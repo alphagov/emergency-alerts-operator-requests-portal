@@ -30,13 +30,10 @@ UPLOAD_ENV = {
 }
 
 DOWNLOAD_ENV = {
-    "LOG_BUCKET": "log-bucket",
-    "DOWNLOAD_DOMAIN": "download.example.gov.uk",
+    "GDS_AWS_PROFILE": "emergency-alerts-test",
     "NOTIFY_LAMBDA_ARN": "arn:aws:lambda:eu-west-2:123456789012:function:notify",
     "NOTIFY_TEMPLATE_ID": "template-id",
-    "DOWNLOAD_TRACKING_TABLE": "download-tracking",
-    "LOG_UPLOAD_TRACKING_TABLE": "upload-tracking",
-    "DOWNLOAD_LINK_EXPIRY_DAYS": "7",
+    "LOG_INVITE_TRACKING_TABLE": "invite-tracking",
     "ALERTS_TEAM_EMAILS": "alerts@example.gov.uk",
 }
 
@@ -55,7 +52,7 @@ def test_upload_invite_send_masks_recipient_email(caplog):
     with caplog.at_level("INFO"), mock.patch(
         "boto3.client", side_effect=lambda *a, **k: mock.MagicMock()
     ):
-        module.send_invite(SENSITIVE_EMAIL, "dummy-token", "broadcast-1", "Test MNO", "MNO1")
+        module.send_invite(SENSITIVE_EMAIL, "broadcast-1", "Test MNO", "MNO1")
 
     log_text = _log_text(caplog)
     assert SENSITIVE_EMAIL not in log_text
@@ -67,10 +64,10 @@ def test_download_link_send_masks_recipient_email(caplog):
         DOWNLOAD_HANDLER_PATH, f"lambda_log_download_{id(object())}", env=DOWNLOAD_ENV
     )
     module.recipients = [SENSITIVE_EMAIL]
-    module.ddb.get_item.return_value = {"Item": {"MnoName": {"S": "Test MNO"}}}
+    module.ddb.get_item.return_value = {"Item": {"MnoName": {"S": "Test MNO"}, "AlertTime": {"S": ""}}}
 
     with caplog.at_level("INFO"):
-        module.send_notification("broadcast-1", "MNO1", "dummy-download-token")
+        module.send_notification("broadcast-1", "MNO1", "log-bucket")
 
     log_text = _log_text(caplog)
     assert SENSITIVE_EMAIL not in log_text

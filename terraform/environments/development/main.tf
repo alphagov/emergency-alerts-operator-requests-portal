@@ -6,7 +6,6 @@ module "shared" {
   infra_mgt_state_bucket     = var.infra_mgt_state_bucket
   infra_mgt_state_key        = var.infra_mgt_state_key
   infra_mgt_state_region     = var.infra_mgt_state_region
-  download_link_expiry_days  = var.download_link_expiry_days
   upload_link_expiry_seconds = var.upload_link_expiry_seconds
   tags                       = var.tags
 
@@ -152,12 +151,11 @@ module "lambda_log_download" {
   # CloudFront actually writes to, both for S3 read access and for the S3->Lambda
   # invoke permission to match the real bucket notification.
   log_bucket                = module.operator_request_portal_static_site.s3_bucket_name
-  download_domain           = local.domain_name
+  gds_aws_profile           = var.gds_aws_profile
   notify_lambda_arn         = module.notify_email_communications.notify_lambda_function_arn
   notify_template_id        = local.notify_templates.log_download
   alerts_team_emails        = "alec.ashmore@digital.cabinet-office.gov.uk"
-  download_link_expiry_days = var.download_link_expiry_days
-  log_upload_tracking_table = local.log_upload_tracking_table
+  log_invite_tracking_table = local.log_invite_tracking_table
 }
 
 # Log upload Lambda
