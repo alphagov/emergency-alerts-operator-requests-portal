@@ -179,7 +179,7 @@ def lambda_handler(event, context):
     }
 
     mno_id is the operator name key used to look up both the contact email and the
-    6-character portal identifier from SSM. The portal identifier is used in upload
+    32-character portal identifier from SSM. The portal identifier is used in upload
     URLs and DynamoDB keys; it never appears in the event payload or the invite email
     body text.
     """
