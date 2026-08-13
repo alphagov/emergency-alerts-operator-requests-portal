@@ -29,7 +29,6 @@ locals {
   log_bucket_name           = "${var.project_name}-logs-${var.environment}"
   static_bucket_name        = "${var.project_name}-static-${var.environment}"
   download_tracking_table   = "${var.project_name}-download-tracking"
-  log_invite_tracking_table = "${var.project_name}-log-invite-tracking-${var.environment}"
   log_upload_tracking_table = "${var.project_name}-log-uploads"
   csr_uploads_table         = "${var.project_name}-csr-uploads-${var.environment}"
   certificates_table        = "${var.project_name}-certificates-${var.environment}"
@@ -150,12 +149,12 @@ module "lambda_log_download" {
   # the separate aws_s3_bucket.log_bucket resource. This must point at the bucket
   # CloudFront actually writes to, both for S3 read access and for the S3->Lambda
   # invoke permission to match the real bucket notification.
-  log_bucket                = module.operator_request_portal_static_site.s3_bucket_name
-  gds_aws_profile           = var.gds_aws_profile
-  notify_lambda_arn         = module.notify_email_communications.notify_lambda_function_arn
-  notify_template_id        = local.notify_templates.log_download
-  alerts_team_emails        = "alec.ashmore@digital.cabinet-office.gov.uk"
-  log_invite_tracking_table = local.log_invite_tracking_table
+  log_bucket         = module.operator_request_portal_static_site.s3_bucket_name
+  gds_aws_profile    = var.gds_aws_profile
+  notify_lambda_arn  = module.notify_email_communications.notify_lambda_function_arn
+  notify_template_id = local.notify_templates.log_download
+  alerts_team_emails = "alec.ashmore@digital.cabinet-office.gov.uk"
+  log_invite_tracking_table = module.lambda_log_upload.log_invite_tracking_table_name
 }
 
 # Log upload Lambda

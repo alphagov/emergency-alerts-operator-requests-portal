@@ -21,7 +21,7 @@ lambda_cli = boto3.client("lambda")
 s3 = boto3.client("s3")
 
 KEY_RE = re.compile(
-    r"^received/logs/(?P<alert>[^/]+)/CBC_(?P=alert)_(?P<mno>[^.]+)\.zip$"
+    r"^received/logs/(?P<alert>[^/]+)/CBC_(?P<mno>[^_]+)_[^_]+_(?P=alert)\.zip$"
 )
 
 ZIP_HEADER_SIGNATURES = (b"PK\x03\x04", b"PK\x05\x06")
@@ -69,23 +69,23 @@ def _mask_email(email: str) -> str:
     return f"{masked_local}@{domain}"
 
 
-def _get_upload_record(portal_id: str, broadcast_id: str) -> dict:
+def _get_upload_record(mno_label: str, broadcast_id: str) -> dict:
     """
     Fetch MnoName and AlertTime from the invite tracking record.
     """
-    key = f"{portal_id}#{broadcast_id}"
+    key = f"{mno_label}#{broadcast_id}"
     try:
         resp = ddb.get_item(
             TableName=LOG_INVITE_TRACKING_TABLE,
             Key={"AlertRef": {"S": key}}
         )
         item = resp.get("Item", {})
-        mno_name = item.get("MnoName", {}).get("S") or portal_id
+        mno_name = item.get("MnoName", {}).get("S") or mno_label
         alert_time = item.get("AlertTime", {}).get("S") or ""
         return {"mno_name": mno_name, "alert_time": alert_time}
     except Exception as e:
         logger.warning("Could not look up invite record for %s: %s", key, e)
-        return {"mno_name": portal_id, "alert_time": ""}
+        return {"mno_name": mno_label, "alert_time": ""}
 
 
 def _format_alert_time(iso_str: str) -> str:
@@ -98,14 +98,13 @@ def _format_alert_time(iso_str: str) -> str:
         return iso_str
 
 
-def send_notification(broadcast_id: str, portal_id: str, bucket: str):
-    record = _get_upload_record(portal_id, broadcast_id)
+def send_notification(broadcast_id: str, mno_label: str, bucket: str, key: str):
+    record = _get_upload_record(mno_label, broadcast_id)
     mno_name = record["mno_name"]
     alert_time = _format_alert_time(record["alert_time"])
 
-    filename = f"CBC_{broadcast_id}_{portal_id}.zip"
-    s3_key = f"received/logs/{broadcast_id}/{filename}"
-    gds_cli_command = f"gds aws {GDS_AWS_PROFILE} aws s3 cp s3://{bucket}/{s3_key} {filename}"
+    filename = key.rsplit("/", 1)[-1]
+    gds_cli_command = f"gds aws {GDS_AWS_PROFILE} aws s3 cp s3://{bucket}/{key} {filename}"
 
     for email in recipients:
         payload = {
@@ -141,17 +140,17 @@ def lambda_handler(event, context):
             continue
 
         broadcast_id = m.group("alert")
-        portal_id = m.group("mno")
+        mno_label = m.group("mno")
 
         if not _is_zip_content(bucket, key):
             logger.warning(
-                "Rejected upload with non-ZIP content for broadcast_id=%s, portal_id=%s",
-                broadcast_id, portal_id
+                "Rejected upload with non-ZIP content for broadcast_id=%s, mno=%s",
+                broadcast_id, mno_label
             )
             continue
 
-        logger.info("New logs for broadcast_id=%s, portal_id=%s", broadcast_id, portal_id)
+        logger.info("New logs for broadcast_id=%s, mno=%s", broadcast_id, mno_label)
 
-        send_notification(broadcast_id, portal_id, bucket)
+        send_notification(broadcast_id, mno_label, bucket, key)
 
     return {"status": "ok"}

@@ -67,7 +67,10 @@ def test_download_link_send_masks_recipient_email(caplog):
     module.ddb.get_item.return_value = {"Item": {"MnoName": {"S": "Test MNO"}, "AlertTime": {"S": ""}}}
 
     with caplog.at_level("INFO"):
-        module.send_notification("broadcast-1", "MNO1", "log-bucket")
+        module.send_notification(
+            "broadcast-1", "MNO1", "log-bucket",
+            "received/logs/broadcast-1/CBC_MNO1_20250101-0000Z_broadcast-1.zip"
+        )
 
     log_text = _log_text(caplog)
     assert SENSITIVE_EMAIL not in log_text

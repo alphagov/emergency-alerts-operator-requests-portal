@@ -94,6 +94,9 @@ def test_is_zip_content_reads_from_the_bucket_named_in_the_event_not_a_hardcoded
         assert call.kwargs["Bucket"] == BUCKET
 
 
+SELF_DESCRIPTIVE_KEY = "received/logs/alert-1/CBC_THREE_20250512-0900Z_alert-1.zip"
+
+
 def test_lambda_handler_skips_non_zip_upload_and_sends_no_notification():
     module = _load()
     _mock_s3_object(module, b"not a zip")
@@ -103,7 +106,7 @@ def test_lambda_handler_skips_non_zip_upload_and_sends_no_notification():
             {
                 "s3": {
                     "bucket": {"name": BUCKET},
-                    "object": {"key": "received/logs/alert-1/CBC_alert-1_MNO1.zip"},
+                    "object": {"key": SELF_DESCRIPTIVE_KEY},
                 }
             }
         ]
@@ -124,7 +127,7 @@ def test_lambda_handler_sends_notification_for_valid_zip():
             {
                 "s3": {
                     "bucket": {"name": BUCKET},
-                    "object": {"key": "received/logs/alert-1/CBC_alert-1_MNO1.zip"},
+                    "object": {"key": SELF_DESCRIPTIVE_KEY},
                 }
             }
         ]
@@ -134,5 +137,5 @@ def test_lambda_handler_sends_notification_for_valid_zip():
 
     module.lambda_cli.invoke.assert_called_once()
     module.s3.head_object.assert_called_once_with(
-        Bucket=BUCKET, Key="received/logs/alert-1/CBC_alert-1_MNO1.zip"
+        Bucket=BUCKET, Key=SELF_DESCRIPTIVE_KEY
     )

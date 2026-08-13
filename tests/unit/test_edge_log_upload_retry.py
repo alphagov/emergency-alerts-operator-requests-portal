@@ -12,10 +12,11 @@ MODULE_PATH = (
 
 MNO_ID = "MNO1"
 BROADCAST_ID = "broadcast-123"
+MNO_HEADER = {"x-upload-token": [{"key": "X-Upload-Token", "value": MNO_ID}]}
 
 
-def _s3_uri(mno=MNO_ID, broadcast=BROADCAST_ID):
-    return f"/received/logs/{broadcast}/CBC_{broadcast}_{mno}.zip"
+def _s3_uri(broadcast=BROADCAST_ID):
+    return f"/received/logs/{broadcast}/CBC_THREE_20250512-0900Z_{broadcast}.zip"
 
 
 def _load():
@@ -37,6 +38,7 @@ def test_viewer_request_allows_valid_link_without_marking_it_used():
     result = module._handle_viewer_request(req)
 
     assert result["uri"] == _s3_uri()
+    assert result["headers"]["x-upload-token"][0]["value"] == MNO_ID
     module.ddb.update_item.assert_not_called()
 
 
@@ -55,8 +57,9 @@ def test_origin_response_failure_leaves_link_unused_for_retry():
     """A non-2xx from the S3 origin (interrupted/failed write) must not mark the
     link as used, so a legitimate retry can still succeed."""
     module = _load()
+    request = {"uri": _s3_uri(), "headers": MNO_HEADER}
 
-    result = module._handle_origin_response({"uri": _s3_uri()}, {"status": "500"})
+    result = module._handle_origin_response(request, {"status": "500"})
 
     assert result == {"status": "500"}
     module.ddb.update_item.assert_not_called()
@@ -64,8 +67,9 @@ def test_origin_response_failure_leaves_link_unused_for_retry():
 
 def test_origin_response_success_marks_link_used_atomically():
     module = _load()
+    request = {"uri": _s3_uri(), "headers": MNO_HEADER}
 
-    module._handle_origin_response({"uri": _s3_uri()}, {"status": "200"})
+    module._handle_origin_response(request, {"status": "200"})
 
     module.ddb.update_item.assert_called_once()
     _, kwargs = module.ddb.update_item.call_args
@@ -76,8 +80,19 @@ def test_origin_response_success_marks_link_used_atomically():
 def test_origin_response_ignores_unrelated_uris():
     """Requests that don't match the upload key pattern must not touch DynamoDB."""
     module = _load()
+    request = {"uri": "/some/other/path", "headers": MNO_HEADER}
 
-    result = module._handle_origin_response({"uri": "/some/other/path"}, {"status": "200"})
+    result = module._handle_origin_response(request, {"status": "200"})
+
+    assert result == {"status": "200"}
+    module.ddb.update_item.assert_not_called()
+
+
+def test_origin_response_ignores_requests_without_the_mno_header():
+    module = _load()
+    request = {"uri": _s3_uri(), "headers": {}}
+
+    result = module._handle_origin_response(request, {"status": "200"})
 
     assert result == {"status": "200"}
     module.ddb.update_item.assert_not_called()
@@ -113,7 +128,7 @@ def test_lambda_handler_dispatches_origin_response_only_after_viewer_request():
             {
                 "cf": {
                     "config": {"eventType": "origin-response"},
-                    "request": {"uri": _s3_uri()},
+                    "request": viewer_result,
                     "response": {"status": "200"},
                 }
             }
@@ -121,3 +136,5 @@ def test_lambda_handler_dispatches_origin_response_only_after_viewer_request():
     }
     module.lambda_handler(origin_event, None)
     module.ddb.update_item.assert_called_once()
+    _, kwargs = module.ddb.update_item.call_args
+    assert kwargs["Key"] == {"RequestId": {"S": f"{MNO_ID}#{BROADCAST_ID}"}}

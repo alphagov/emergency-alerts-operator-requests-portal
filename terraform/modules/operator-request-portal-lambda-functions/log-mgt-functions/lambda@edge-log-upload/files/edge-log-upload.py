@@ -17,8 +17,10 @@ ddb = boto3.client(
 )
 
 S3_KEY_RE = re.compile(
-    r"^/received/logs/(?P<broadcast>[^/]+)/CBC_(?P=broadcast)_(?P<mno>[^.]+)\.zip$"
+    r"^/received/logs/(?P<broadcast>[^/]+)/CBC_[^_]+_[^_]+_(?P=broadcast)\.zip$"
 )
+
+MNO_ID_HEADER_NAME = "x-upload-token"
 
 
 def error_response(status_code: int, status_desc: str, body: str, error_type: str = None) -> dict:
@@ -134,6 +136,9 @@ def _handle_viewer_request(req):
 
     req["uri"] = s3_location
     req["querystring"] = ""
+    req.setdefault("headers", {})[MNO_ID_HEADER_NAME] = [
+        {"key": "X-Upload-Token", "value": mno_id}
+    ]
     logger.info(
         "Upload validated, forwarding to origin: uri=%s (mno=%s, broadcast_id=%s)",
         req["uri"], mno_id, broadcast_id
@@ -146,8 +151,13 @@ def _handle_origin_response(request, response):
     match = S3_KEY_RE.match(request.get("uri", ""))
     if not match:
         return response
+    broadcast_id = match.group("broadcast")
 
-    mno_id, broadcast_id = match.group("mno"), match.group("broadcast")
+    mno_id_header = request.get("headers", {}).get(MNO_ID_HEADER_NAME)
+    mno_id = mno_id_header[0].get("value") if mno_id_header else None
+    if not mno_id:
+        return response
+
     composite_key = f"{mno_id}#{broadcast_id}"
 
     if not status.startswith("2"):

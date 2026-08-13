@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 import boto3
 
@@ -56,6 +57,21 @@ def _mask_email(email: str) -> str:
     return f"{masked_local}@{domain}"
 
 
+def _sanitize_for_filename(value: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9-]+", "-", value).strip("-")
+    return cleaned.upper() or "UNKNOWN"
+
+
+def _format_timestamp_for_filename(iso_str: str) -> str:
+    if not iso_str:
+        return "unknown-time"
+    try:
+        dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+        return dt.strftime("%Y%m%d-%H%MZ")
+    except ValueError:
+        return "unknown-time"
+
+
 def _invite_key(mno_id: str, broadcast_id: str) -> str:
     return f"{mno_id}#{broadcast_id}"
 
@@ -68,11 +84,12 @@ def already_invited(mno_id: str, broadcast_id: str) -> bool:
     return "Item" in resp
 
 
-def mark_invited(mno_id: str, broadcast_id: str, mno_name: str, alert_time: str):
+def mark_invited(mno_label: str, broadcast_id: str, mno_name: str, alert_time: str):
+
     ddb.put_item(
         TableName=LOG_INVITE_TRACKING_TABLE,
         Item={
-            "AlertRef": {"S": _invite_key(mno_id, broadcast_id)},
+            "AlertRef": {"S": _invite_key(mno_label, broadcast_id)},
             "InvitedAt": {"S": datetime.now(timezone.utc).isoformat()},
             "MnoName": {"S": mno_name},
             "AlertTime": {"S": alert_time}
@@ -180,7 +197,9 @@ def lambda_handler(event, context):
             logger.warning(f"No portal identifier found for MNO {mno_id}, skipping")
             continue
 
-        if already_invited(portal_id, broadcast_id):
+        mno_label = _sanitize_for_filename(mno_id)
+
+        if already_invited(mno_label, broadcast_id):
             logger.info(f"Invite for MNO {mno_id} ({portal_id}) broadcast {broadcast_id} already sent, skipping")
             continue
 
@@ -189,15 +208,17 @@ def lambda_handler(event, context):
             logger.warning(f"No emails found for MNO {mno_id}, skipping")
             continue
 
-        s3_location = f"/received/logs/{broadcast_id}/CBC_{broadcast_id}_{portal_id}.zip"
+        broadcast_start = event.get("broadcast_start", "")
+        filename = f"CBC_{mno_label}_{_format_timestamp_for_filename(broadcast_start)}_{broadcast_id}.zip"
+        s3_location = f"/received/logs/{broadcast_id}/{filename}"
         prepare_folder(broadcast_id)
         register_upload_reference(portal_id, broadcast_id, s3_location, mno_id)
+
+        mark_invited(mno_label, broadcast_id, mno_id, broadcast_start)
 
         for email in emails:
             send_invite(email, broadcast_id, mno_id, portal_id)
 
-        broadcast_start = event.get("broadcast_start", "")
-        mark_invited(portal_id, broadcast_id, mno_id, broadcast_start)
         invites_sent.append({"mno_id": mno_id, "portal_id": portal_id})
 
     logger.info(f"Sent {len(invites_sent)} upload invite(s) for alert {alert_ref}")
