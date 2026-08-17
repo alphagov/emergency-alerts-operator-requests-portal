@@ -29,9 +29,9 @@ variable "infra_mgt_state_region" {
   type        = string
 }
 
-variable "download_link_expiry_days" {
-  description = "Number of days download links remain valid"
-  type        = number
+variable "gds_aws_profile" {
+  description = "GDS AWS profile name used in the CLI download command sent to the alerts team"
+  type        = string
 }
 
 variable "upload_link_expiry_seconds" {

@@ -15,13 +15,11 @@ resource "aws_lambda_function" "notify_on_upload" {
 
   environment {
     variables = {
-      DOWNLOAD_DOMAIN           = var.download_domain
+      GDS_AWS_PROFILE           = var.gds_aws_profile
       NOTIFY_LAMBDA_ARN         = var.notify_lambda_arn
       NOTIFY_TEMPLATE_ID        = var.notify_template_id
-      DOWNLOAD_TRACKING_TABLE   = aws_dynamodb_table.download_tracking.name
-      LOG_UPLOAD_TRACKING_TABLE = var.log_upload_tracking_table
+      LOG_INVITE_TRACKING_TABLE = var.log_invite_tracking_table
       ALERTS_TEAM_EMAILS        = var.alerts_team_emails
-      DOWNLOAD_LINK_EXPIRY_DAYS = tostring(var.download_link_expiry_days)
     }
   }
 }
