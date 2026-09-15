@@ -6,6 +6,7 @@ locals {
 
   env_map = {
     "mno-portal-development" = "dev"
+    "mno-portal-preview"     = "preview"
     "mno-portal-staging"     = "staging"
     "prod"                   = "prod"
   }
