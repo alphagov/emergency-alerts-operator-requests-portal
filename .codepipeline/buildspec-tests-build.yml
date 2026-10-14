@@ -3,7 +3,7 @@ env:
   variables:
     ENVIRONMENT: development
     testsuites: >-
-      log-upload-full-flow
+      functional-tests
 
     AWS_REGION: eu-west-2
 
@@ -16,6 +16,7 @@ env:
 
     MNO_PORTAL_ACCOUNT_ID: /operator-portal/functional-tests/account-id
     TEST_MNO_ID: /operator-portal/functional-tests/test-mno-id
+    TEST_MNO_PORTAL_ID: /operator-portal/functional-tests/test-mno-portal-id
     LOG_UPLOAD_LAMBDA_NAME: /operator-portal/functional-tests/log-upload-lambda-name
     LOG_BUCKET_NAME: /operator-portal/functional-tests/log-bucket-name
 
@@ -70,7 +71,7 @@ phases:
     commands:
       - . /tmp/codebuild_env_export
       - . $VENV/bin/activate
-      - make test-log-upload; exit 0
+      - make test-functional; exit 0
       - echo "Test run completed."
       - python3.12 ./scripts/report-test-results.py functional-test-reports
 

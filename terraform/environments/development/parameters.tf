@@ -36,7 +36,7 @@ resource "aws_ssm_parameter" "functional_test_log_upload_lambda_name" {
   name        = "/operator-portal/functional-tests/log-upload-lambda-name"
   description = "Name of the log upload handler Lambda invoked by the functional tests"
   type        = "String"
-  value       = "mno-portal-${var.environment}-log-upload-handler"
+  value       = "${var.environment}-log-upload-handler"
 
   tags = var.tags
 }
@@ -45,7 +45,7 @@ resource "aws_ssm_parameter" "functional_test_log_bucket_name" {
   name        = "/operator-portal/functional-tests/log-bucket-name"
   description = "Name of the S3 bucket the functional tests assert log files land in"
   type        = "String"
-  value       = "operator-request-portal-${var.environment}"
+  value       = "${var.project_name}-logs-${var.environment}"
 
   tags = var.tags
 }
@@ -188,6 +188,20 @@ resource "aws_ssm_parameter" "mno_portal_id_three" {
 resource "aws_ssm_parameter" "mno_portal_id_o2" {
   name        = "/operator-portal/mno-ids/o2"
   description = "6-character portal identifier for O2"
+  type        = "SecureString"
+  key_id      = "alias/aws/ssm"
+  value       = "dummy"
+
+  lifecycle {
+    ignore_changes = all
+  }
+
+  tags = var.tags
+}
+
+resource "aws_ssm_parameter" "mno_email_test" {
+  name        = "/operator-portal/mno-emails/test_mno_001"
+  description = "Email address for the TEST_MNO_001 functional test operator — without this, the log-upload-handler Lambda finds no emails and skips the invite entirely (links_generated stays 0)"
   type        = "SecureString"
   key_id      = "alias/aws/ssm"
   value       = "dummy"
