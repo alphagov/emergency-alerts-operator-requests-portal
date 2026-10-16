@@ -222,7 +222,7 @@ module "operator_request_portal_static_site" {
   environment    = local.environment
   domain_name    = local.domain_name
   hosted_zone_id = local.hosted_zone_id
-  region         = "eu-west-2"
+  region         = local.aws_region
   tags           = var.tags
 
   # HTML files will be uploaded from files/ directory

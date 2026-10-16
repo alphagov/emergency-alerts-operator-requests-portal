@@ -41,6 +41,12 @@ variable "eas_preview_account_id" {
   default     = "644514520413"
 }
 
+variable "eas_development_account_id" {
+  type        = string
+  description = "EAS Development account ID for cross-account Lambda invocation"
+  default     = "071839617283"
+}
+
 variable "mno_email_ssm_prefix" {
   description = "SSM Parameter Store prefix for MNO contact email addresses"
   type        = string

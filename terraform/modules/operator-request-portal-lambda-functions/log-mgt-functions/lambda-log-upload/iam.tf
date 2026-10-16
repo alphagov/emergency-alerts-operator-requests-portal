@@ -85,8 +85,8 @@ resource "aws_iam_role_policy" "log_upload_policy" {
 
 locals {
   eas_invoking_account_ids = {
-    "mno-portal-development" = "071839617283"             # eas-development
-    "mno-portal-preview"     = var.eas_preview_account_id # eas-preview
+    "mno-portal-development" = var.eas_development_account_id # eas-development
+    "mno-portal-preview"     = var.eas_preview_account_id     # eas-preview
   }
 }
 
