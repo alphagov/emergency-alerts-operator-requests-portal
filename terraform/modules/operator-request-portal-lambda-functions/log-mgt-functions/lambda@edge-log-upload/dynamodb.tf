@@ -1,16 +1,7 @@
-resource "aws_dynamodb_table" "log_upload_tracking" {
-  name         = "operator-request-portal-log-uploads"
-  billing_mode = "PAY_PER_REQUEST"
+removed {
+  from = aws_dynamodb_table.log_upload_tracking
 
-  hash_key = "RequestId"
-
-  attribute {
-    name = "RequestId"
-    type = "S"
-  }
-
-  tags = {
-    Environment = var.environment
-    Name        = "operator-request-portal-log-uploads"
+  lifecycle {
+    destroy = false
   }
 }
