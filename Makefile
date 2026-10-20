@@ -16,10 +16,6 @@ lint:
 	flake8 .
 	black --check .
 
-.PHONY: test-log-upload
-test-log-upload: ## Run all log upload functional tests in a single session
-	pytest -v \
-	tests/functional/test_log_upload_request_flow.py \
-	tests/functional/test_log_upload_link_works.py \
-	tests/functional/test_log_upload_link_single_use.py \
-	--junitxml=functional-test-reports/log-upload-full-flow
+.PHONY: test-functional
+test-functional: ## Run the full functional test suite against $ENVIRONMENT (default: development)
+	pytest -v tests/functional --junitxml=functional-test-reports/functional-tests

@@ -33,7 +33,7 @@ resource "aws_iam_role_policy" "edge_policy" {
           "dynamodb:GetItem",
           "dynamodb:UpdateItem"
         ],
-        Resource = aws_dynamodb_table.log_upload_tracking.arn
+        Resource = var.log_upload_tracking_table_arn
       }
     ]
   })

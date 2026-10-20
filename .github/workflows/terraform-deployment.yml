@@ -52,3 +52,23 @@ jobs:
       approval_required: false
     secrets:
       account_id: "435684131547"
+
+  plan-preview:
+    needs: unit-tests
+    uses: ./.github/workflows/.terraform-plan.yml
+    with:
+      environment: preview
+      working_directory: terraform/environments/preview
+    secrets:
+      account_id: "248648925010"
+
+  apply-preview:
+    needs: plan-preview
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    uses: ./.github/workflows/.terraform-apply.yml
+    with:
+      environment: preview
+      working_directory: terraform/environments/preview
+      approval_required: false
+    secrets:
+      account_id: "248648925010"

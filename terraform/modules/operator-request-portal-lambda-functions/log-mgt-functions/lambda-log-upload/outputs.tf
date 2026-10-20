@@ -7,3 +7,13 @@ output "log_invite_tracking_table_name" {
   description = "Name of the log invite tracking DynamoDB table"
   value       = aws_dynamodb_table.log_invite_tracking.name
 }
+
+output "log_upload_tracking_table_name" {
+  description = "Name of the log upload tracking DynamoDB table"
+  value       = aws_dynamodb_table.log_upload_tracking.name
+}
+
+output "log_upload_tracking_table_arn" {
+  description = "ARN of the log upload tracking DynamoDB table"
+  value       = aws_dynamodb_table.log_upload_tracking.arn
+}

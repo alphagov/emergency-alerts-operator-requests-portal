@@ -1,6 +1,9 @@
+import io
 import json
 import logging
 import time
+import zipfile
+from datetime import datetime, timedelta, timezone
 
 import boto3
 
@@ -100,6 +103,37 @@ def delete_upload_tracking_record(mno_id: str, broadcast_id: str):
     logger.info("Deleted upload tracking record for mno=%s broadcast=%s", mno_id, broadcast_id)
 
 
+def put_upload_tracking_record(
+    mno_portal_id: str,
+    broadcast_id: str,
+    s3_location: str,
+    mno_id: str = "functional-test-mno",
+    mno_name: str = "Functional Test MNO",
+    expires_in_seconds: int = 604800,
+    used: bool = False,
+) -> None:
+    """
+    Write an upload tracking record directly, mirroring what
+    log-upload-handler.py's register_upload_reference() produces
+    """
+    client = boto3.client("dynamodb", region_name=config["aws_region"])
+    expires_at = (datetime.now(timezone.utc) + timedelta(seconds=expires_in_seconds)).isoformat()
+    client.put_item(
+        TableName=config["log_upload_tracking_table"],
+        Item={
+            "RequestId": {"S": f"{mno_portal_id}#{broadcast_id}"},
+            "CreatedAt": {"S": datetime.now(timezone.utc).isoformat()},
+            "ExpiresAt": {"S": expires_at},
+            "Used": {"BOOL": used},
+            "S3Location": {"S": s3_location},
+            "MnoId": {"S": mno_id},
+            "MnoName": {"S": mno_name},
+            "BroadcastId": {"S": broadcast_id},
+        },
+    )
+    logger.info("Put upload tracking record for %s#%s", mno_portal_id, broadcast_id)
+
+
 def s3_object_exists(key: str) -> bool:
     client = boto3.client("s3", region_name=config["aws_region"])
     try:
@@ -115,6 +149,52 @@ def delete_s3_object(key: str):
     client = boto3.client("s3", region_name=config["aws_region"])
     client.delete_object(Bucket=config["log_bucket_name"], Key=key)
     logger.info("Deleted S3 object: s3://%s/%s", config["log_bucket_name"], key)
+
+
+def delete_s3_prefix(prefix: str):
+    "Delete every object under an S3 prefix"
+    client = boto3.client("s3", region_name=config["aws_region"])
+    paginator = client.get_paginator("list_objects_v2")
+    keys = [
+        obj["Key"]
+        for page in paginator.paginate(Bucket=config["log_bucket_name"], Prefix=prefix)
+        for obj in page.get("Contents", [])
+    ]
+    if not keys:
+        return
+    client.delete_objects(
+        Bucket=config["log_bucket_name"],
+        Delete={"Objects": [{"Key": k} for k in keys]},
+    )
+    logger.info("Deleted %d object(s) under s3://%s/%s", len(keys), config["log_bucket_name"], prefix)
+
+
+def make_zip_bytes(content: str = "functional test log content") -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("test.log", content)
+    return buf.getvalue()
+
+
+def make_truncated_zip_bytes() -> bytes:
+    "A valid zip with its End-Of-Central-Directory record cut off."
+    valid = make_zip_bytes()
+    return valid[: len(valid) // 2]
+
+
+def filter_cloudwatch_logs(function_name: str, filter_pattern: str, since_minutes: int = 10) -> list[str]:
+    "Return log messages from a Lambda's CloudWatch log group matching filter_pattern."
+    client = boto3.client("logs", region_name=config["aws_region"])
+    start_time_ms = int((datetime.now(timezone.utc) - timedelta(minutes=since_minutes)).timestamp() * 1000)
+    try:
+        resp = client.filter_log_events(
+            logGroupName=f"/aws/lambda/{function_name}",
+            filterPattern=filter_pattern,
+            startTime=start_time_ms,
+        )
+    except client.exceptions.ResourceNotFoundException:
+        return []
+    return [event["message"] for event in resp.get("events", [])]
 
 
 def poll_notify_for_email(

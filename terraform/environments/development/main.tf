@@ -149,11 +149,11 @@ module "lambda_log_download" {
   # the separate aws_s3_bucket.log_bucket resource. This must point at the bucket
   # CloudFront actually writes to, both for S3 read access and for the S3->Lambda
   # invoke permission to match the real bucket notification.
-  log_bucket         = module.operator_request_portal_static_site.s3_bucket_name
-  gds_aws_profile    = var.gds_aws_profile
-  notify_lambda_arn  = module.notify_email_communications.notify_lambda_function_arn
-  notify_template_id = local.notify_templates.log_download
-  alerts_team_emails = "alec.ashmore@digital.cabinet-office.gov.uk"
+  log_bucket                = module.operator_request_portal_static_site.s3_bucket_name
+  gds_aws_profile           = var.gds_aws_profile
+  notify_lambda_arn         = module.notify_email_communications.notify_lambda_function_arn
+  notify_template_id        = local.notify_templates.log_download
+  alerts_team_emails        = "alec.ashmore@digital.cabinet-office.gov.uk"
   log_invite_tracking_table = module.lambda_log_upload.log_invite_tracking_table_name
 }
 
@@ -202,10 +202,12 @@ module "lambda_edge_log_download" {
 module "lambda_edge_log_upload" {
   source = "../../modules/operator-request-portal-lambda-functions/log-mgt-functions/lambda@edge-log-upload"
 
-  environment                = local.environment
-  upload_domain              = local.domain_name
-  dynamodb_region            = local.aws_region
-  cloudfront_distribution_id = module.operator_request_portal_static_site.cloudfront_distribution_id
+  environment                    = local.environment
+  upload_domain                  = local.domain_name
+  dynamodb_region                = local.aws_region
+  cloudfront_distribution_id     = module.operator_request_portal_static_site.cloudfront_distribution_id
+  log_upload_tracking_table_name = module.lambda_log_upload.log_upload_tracking_table_name
+  log_upload_tracking_table_arn  = module.lambda_log_upload.log_upload_tracking_table_arn
 
   providers = {
     aws.us_east_1 = aws.us_east_1
@@ -220,7 +222,7 @@ module "operator_request_portal_static_site" {
   environment    = local.environment
   domain_name    = local.domain_name
   hosted_zone_id = local.hosted_zone_id
-  region         = "eu-west-2"
+  region         = local.aws_region
   tags           = var.tags
 
   # HTML files will be uploaded from files/ directory
