@@ -227,16 +227,21 @@ def poll_notify_for_email(
     from notifications_python_client import NotificationsAPIClient
 
     client = NotificationsAPIClient(config["notify_api_key"])
+    failed_statuses = ("permanent-failure", "temporary-failure", "technical-failure", "validation-failed")
+    seen = []
 
     for attempt in range(1, retries + 1):
         logger.info(
             "Polling Notify for email to %s (attempt %d/%d)", mno_email, attempt, retries
         )
-        notifications = client.get_all_notifications(
-            template_type="email", status="delivered"
-        )
-        for notification in notifications.get("notifications", []):
-            if notification.get("email_address") != mno_email:
+        notifications = client.get_all_notifications(template_type="email").get("notifications", [])
+        seen = [
+            f"{n.get('status')}: {n.get('subject')!r}"
+            for n in notifications
+            if (n.get("email_address") or "").lower() == mno_email.lower()
+        ]
+        for notification in notifications:
+            if (notification.get("email_address") or "").lower() != mno_email.lower():
                 continue
             subject = notification.get("subject", "") or ""
             if expected_subject_fragment.lower() not in subject.lower():
@@ -244,7 +249,9 @@ def poll_notify_for_email(
             body = notification.get("body", "") or ""
             if alert_reference and alert_reference not in subject and alert_reference not in body:
                 continue
-            logger.info("Found matching notification: %s", notification.get("id"))
+            status = notification.get("status")
+            assert status not in failed_statuses, f"Notify could not deliver the invite email: {status}"
+            logger.info("Found matching notification %s (status=%s)", notification.get("id"), status)
             return notification
 
         if attempt < retries:
@@ -252,6 +259,7 @@ def poll_notify_for_email(
 
     raise AssertionError(
         f"No email with subject containing '{expected_subject_fragment}' "
-        f"for alert '{alert_reference}' "
-        f"delivered to {mno_email} after {retries * interval}s"
+        f"for alert '{alert_reference}' to {mno_email} after {retries * interval}s. "
+        f"Notify returned {len(notifications)} email(s) in total; "
+        f"{len(seen)} to this address: {seen[:10]}"
     )
