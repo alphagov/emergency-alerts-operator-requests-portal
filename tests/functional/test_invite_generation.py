@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from config import config
 from tests.aws_utils import (
-    filter_cloudwatch_logs,
+    wait_for_cloudwatch_logs,
     get_invite_tracking_record,
     get_upload_tracking_record,
     invoke_log_upload_lambda,
@@ -93,10 +93,9 @@ def test_invite_pii_masked_in_logs(broadcast_id, mno_id, mno_email):
         broadcast_id=broadcast_id,
     )
 
-    matches = filter_cloudwatch_logs(
+    matches = wait_for_cloudwatch_logs(
         config["log_upload_lambda_name"],
         filter_pattern=f'"{broadcast_id}"',
-        since_minutes=5,
     )
     assert matches, f"No log lines found for broadcast {broadcast_id} — check the log group name/timing"
     full_email_pattern = re.compile(re.escape(mno_email))

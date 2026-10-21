@@ -57,7 +57,7 @@ data "aws_iam_policy_document" "functional_tests_access_permissions" {
   statement {
     effect    = "Allow"
     actions   = ["s3:ListBucket"]
-    resources = [aws_s3_bucket.log_bucket.arn]
+    resources = ["arn:aws:s3:::${module.operator_request_portal_static_site.s3_bucket_name}"]
 
     condition {
       test     = "StringLike"
@@ -67,9 +67,11 @@ data "aws_iam_policy_document" "functional_tests_access_permissions" {
   }
 
   statement {
-    effect    = "Allow"
-    actions   = ["s3:DeleteObject"]
-    resources = ["${aws_s3_bucket.log_bucket.arn}/received/logs/*"]
+    effect  = "Allow"
+    actions = ["s3:GetObject", "s3:DeleteObject"]
+    resources = [
+      "arn:aws:s3:::${module.operator_request_portal_static_site.s3_bucket_name}/received/logs/*",
+    ]
   }
 }
 

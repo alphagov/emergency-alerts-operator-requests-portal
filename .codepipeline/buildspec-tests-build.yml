@@ -79,7 +79,7 @@ phases:
     commands:
       - |
         for file in functional-test-reports/*; do
-          if [ "$file" != "${file%.xml}" ]; then
+          if [ "$file" = "${file%.xml}" ]; then
             cp "$file" "${file}.xml"
           fi
         done

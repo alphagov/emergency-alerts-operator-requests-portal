@@ -186,15 +186,35 @@ def filter_cloudwatch_logs(function_name: str, filter_pattern: str, since_minute
     "Return log messages from a Lambda's CloudWatch log group matching filter_pattern."
     client = boto3.client("logs", region_name=config["aws_region"])
     start_time_ms = int((datetime.now(timezone.utc) - timedelta(minutes=since_minutes)).timestamp() * 1000)
+    messages = []
     try:
-        resp = client.filter_log_events(
+        # filter_log_events can return empty pages with a nextToken, so always paginate
+        paginator = client.get_paginator("filter_log_events")
+        for page in paginator.paginate(
             logGroupName=f"/aws/lambda/{function_name}",
             filterPattern=filter_pattern,
             startTime=start_time_ms,
-        )
+        ):
+            messages.extend(event["message"] for event in page.get("events", []))
     except client.exceptions.ResourceNotFoundException:
-        return []
-    return [event["message"] for event in resp.get("events", [])]
+        logger.warning("Log group /aws/lambda/%s not found", function_name)
+    return messages
+
+
+def wait_for_cloudwatch_logs(
+    function_name: str,
+    filter_pattern: str,
+    timeout: int = 60,
+    interval: int = 3,
+    since_minutes: int = 10,
+) -> list[str]:
+    "Poll until filter_pattern matches (CloudWatch ingestion lags the invocation); [] on timeout."
+    deadline = time.monotonic() + timeout
+    while True:
+        matches = filter_cloudwatch_logs(function_name, filter_pattern, since_minutes)
+        if matches or time.monotonic() >= deadline:
+            return matches
+        time.sleep(interval)
 
 
 def poll_notify_for_email(
@@ -221,7 +241,8 @@ def poll_notify_for_email(
             subject = notification.get("subject", "") or ""
             if expected_subject_fragment.lower() not in subject.lower():
                 continue
-            if alert_reference and alert_reference not in subject:
+            body = notification.get("body", "") or ""
+            if alert_reference and alert_reference not in subject and alert_reference not in body:
                 continue
             logger.info("Found matching notification: %s", notification.get("id"))
             return notification
