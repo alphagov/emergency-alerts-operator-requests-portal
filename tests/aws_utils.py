@@ -142,6 +142,11 @@ def s3_object_exists(key: str) -> bool:
     except client.exceptions.ClientError as e:
         if e.response["Error"]["Code"] == "404":
             return False
+        logger.error(
+            "HeadObject s3://%s/%s failed (%s) as %s",
+            config["log_bucket_name"], key, e.response["Error"]["Code"],
+            boto3.client("sts", region_name=config["aws_region"]).get_caller_identity()["Arn"],
+        )
         raise
 
 

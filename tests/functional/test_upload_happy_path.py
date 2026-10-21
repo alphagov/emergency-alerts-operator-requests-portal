@@ -39,7 +39,7 @@ def test_log_upload_end_to_end(broadcast_id, mno_id, mno_portal_id, mno_email, m
     portal_host = config["portal_url"].removeprefix("https://")
     notification = poll_notify_for_email(
         mno_email=mno_email,
-        expected_subject_fragment="CBC activity logs",
+        expected_subject_fragment="CBC activity log request",
         alert_reference=broadcast_id,
         retries=config["verify_code_retry_times"] * 4,
         interval=config["verify_code_retry_interval"] * 3,
