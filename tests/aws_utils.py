@@ -134,29 +134,6 @@ def put_upload_tracking_record(
     logger.info("Put upload tracking record for %s#%s", mno_portal_id, broadcast_id)
 
 
-def _log_s3_access_diagnostics(client, key: str, error) -> None:
-    "Probe which S3 calls work when HeadObject is refused, to locate where the denial happens."
-    bucket = config["log_bucket_name"]
-    logger.error(
-        "HeadObject s3://%s/%s failed: %s (request id %s) as %s",
-        bucket, key, error.response["Error"]["Code"],
-        error.response.get("ResponseMetadata", {}).get("RequestId"),
-        boto3.client("sts", region_name=config["aws_region"]).get_caller_identity()["Arn"],
-    )
-    probes = {
-        "head_bucket": lambda: client.head_bucket(Bucket=bucket),
-        "list_objects_v2": lambda: client.list_objects_v2(Bucket=bucket, Prefix=key.rsplit("/", 1)[0], MaxKeys=5),
-        "get_bucket_location": lambda: client.get_bucket_location(Bucket=bucket),
-    }
-    for name, probe in probes.items():
-        try:
-            result = probe()
-            keys = [o["Key"] for o in result.get("Contents", [])] if name == "list_objects_v2" else ""
-            logger.error("S3 diagnostic %s: OK %s", name, keys)
-        except Exception as probe_error:
-            logger.error("S3 diagnostic %s: %s", name, probe_error)
-
-
 def s3_object_exists(key: str) -> bool:
     client = boto3.client("s3", region_name=config["aws_region"])
     try:
@@ -165,7 +142,6 @@ def s3_object_exists(key: str) -> bool:
     except client.exceptions.ClientError as e:
         if e.response["Error"]["Code"] == "404":
             return False
-        _log_s3_access_diagnostics(client, key, e)
         raise
 
 
