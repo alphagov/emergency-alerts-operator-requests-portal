@@ -39,9 +39,9 @@ phases:
         echo "Assuming role into MNO portal account ${MNO_PORTAL_ACCOUNT_ID}"
         SESSION_NAME="mno-portal-tests-$(echo $CODEBUILD_BUILD_ID | cut -c1-32)"
         aws_credentials=$(aws sts assume-role \
-          --role-arn "arn:aws:iam::${MNO_PORTAL_ACCOUNT_ID}:role/eas-terraformer" \
+          --role-arn "arn:aws:iam::${MNO_PORTAL_ACCOUNT_ID}:role/mno-portal-functional-tests-access" \
           --role-session-name "$SESSION_NAME" \
-          --external-id "eas-mno-portal-${ENVIRONMENT}-terraformer" \
+          --external-id "eas-mno-portal-${ENVIRONMENT}-functional-tests-access" \
           --output json)
 
         if [ $? -ne 0 ]; then
