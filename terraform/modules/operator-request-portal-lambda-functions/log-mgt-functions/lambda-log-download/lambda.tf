@@ -31,3 +31,16 @@ resource "aws_lambda_permission" "allow_s3" {
   principal     = "s3.amazonaws.com"
   source_arn    = "arn:aws:s3:::${var.log_bucket}"
 }
+
+resource "aws_s3_bucket_notification" "notify_on_upload" {
+  bucket = var.log_bucket
+
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.notify_on_upload.arn
+    events              = ["s3:ObjectCreated:*"]
+    filter_prefix       = "received/logs/"
+    filter_suffix       = ".zip"
+  }
+
+  depends_on = [aws_lambda_permission.allow_s3]
+}
