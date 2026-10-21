@@ -87,8 +87,10 @@ phases:
       - python3.12 ./scripts/signal-build-pass-or-fail.py $(pwd) $testsuites
 
 artifacts:
-  files:
-    - functional-test-reports/*
+  secondary-artifacts:
+    TestOutput:
+      files:
+        - functional-test-reports/*
 
 reports:
   mno-portal-functional-test-reports:
