@@ -91,6 +91,10 @@ artifacts:
     TestOutput:
       files:
         - functional-test-reports/*
+    # The project also declares this artifact; nothing failure-specific is produced yet
+    FailedTestOutput:
+      files:
+        - functional-test-reports/*
 
 reports:
   mno-portal-functional-test-reports:
