@@ -44,10 +44,11 @@ def test_concurrent_broadcasts_no_cross_contamination(mno_id, mno_label):
 
 
 def test_http_redirects_to_https():
-    "Plain HTTP requests are redirected to HTTPS, not served insecurely."
+    """Plain HTTP requests are never served insecurely: either redirected to HTTPS
+    or refused (CloudFront https-only behaviours, e.g. *.html, answer 403)."""
     http_url = f"http://{config['portal_url'].removeprefix('https://')}/index.html"
     resp = requests.get(http_url, timeout=30, allow_redirects=False)
-    assert resp.status_code in (301, 302, 307, 308), (
-        f"Expected a redirect to HTTPS, got {resp.status_code}"
-    )
-    assert resp.headers.get("Location", "").startswith("https://")
+    if resp.status_code in (301, 302, 307, 308):
+        assert resp.headers.get("Location", "").startswith("https://")
+    else:
+        assert resp.status_code == 403, f"HTTP request was neither redirected nor refused: {resp.status_code}"

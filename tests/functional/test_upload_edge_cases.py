@@ -8,6 +8,7 @@ from tests.aws_utils import (
     make_truncated_zip_bytes,
     put_upload_tracking_record,
     s3_object_exists,
+    wait_for_cloudwatch_logs,
 )
 
 logger = logging.getLogger(__name__)
@@ -77,14 +78,18 @@ def _rejected_content_case(mno_portal_id, broadcast_id, content: bytes):
     assert resp.status_code == 200, "Edge Lambda validates the key pattern, not content"
     assert s3_object_exists(s3_key)
 
+    # Wait for the positive rejection log first, so the negative check below isn't vacuous
+    rejected = wait_for_cloudwatch_logs(
+        config["log_download_lambda_name"],
+        filter_pattern=f'"Rejected upload with non-ZIP content for broadcast_id={broadcast_id}"',
+    )
+    assert rejected, "Expected the download Lambda to log a non-ZIP rejection"
+
     matches = filter_cloudwatch_logs(
         config["log_download_lambda_name"],
-        filter_pattern=f'"{broadcast_id}"',
-        since_minutes=5,
+        filter_pattern=f'"Sent download notification for {broadcast_id}"',
     )
-    assert not any("Sent download notification" in m for m in matches), (
-        "Internal notify should NOT fire for non-ZIP content"
-    )
+    assert not matches, "Internal notify should NOT fire for non-ZIP content"
 
 
 def test_non_zip_file_renamed_zip(mno_portal_id, broadcast_id):

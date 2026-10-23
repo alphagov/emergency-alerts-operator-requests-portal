@@ -6,13 +6,13 @@ import requests
 
 from config import config
 from tests.aws_utils import (
-    filter_cloudwatch_logs,
     get_invite_tracking_record,
     get_upload_tracking_record,
     invoke_log_upload_lambda,
     make_zip_bytes,
     poll_notify_for_email,
     s3_object_exists,
+    wait_for_cloudwatch_logs,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ def test_log_upload_end_to_end(broadcast_id, mno_id, mno_portal_id, mno_email, m
     portal_host = config["portal_url"].removeprefix("https://")
     notification = poll_notify_for_email(
         mno_email=mno_email,
-        expected_subject_fragment="CBC activity logs",
+        expected_subject_fragment="CBC activity log request",
         alert_reference=broadcast_id,
         retries=config["verify_code_retry_times"] * 4,
         interval=config["verify_code_retry_interval"] * 3,
@@ -47,13 +47,10 @@ def test_log_upload_end_to_end(broadcast_id, mno_id, mno_portal_id, mno_email, m
     email_body = notification.get("body", "")
 
     pattern = re.compile(
-        r"(https://" + re.escape(portal_host)
-        + r"/log-upload\?mno=" + re.escape(mno_portal_id)
-        + r"&broadcast_id=" + re.escape(broadcast_id) + r")"
+        r"https://" + re.escape(portal_host) + r"/upload-logs\.html\?broadcast_id=" + re.escape(broadcast_id)
     )
-    match = pattern.search(email_body)
-    assert match, f"Could not extract upload URL from email body — pattern not matched:\n{email_body}"
-    upload_url = match.group(1).strip()
+    assert pattern.search(email_body), f"Upload page link not found in email body:\n{email_body}"
+    upload_url = f"{config['portal_url']}/log-upload?mno={mno_portal_id}&broadcast_id={broadcast_id}"
 
     logger.info("Step 3: uploading dummy .zip via PUT")
     put_response = requests.put(
@@ -75,10 +72,9 @@ def test_log_upload_end_to_end(broadcast_id, mno_id, mno_portal_id, mno_email, m
     assert s3_object_exists(s3_key), f"Expected S3 object not found: s3://{config['log_bucket_name']}/{s3_key}"
 
     logger.info("Step 5: confirming internal notify notification fired for this key")
-    matches = filter_cloudwatch_logs(
+    matches = wait_for_cloudwatch_logs(
         config["log_download_lambda_name"],
         filter_pattern=f'"Sent download notification for {broadcast_id}"',
-        since_minutes=5,
     )
     assert matches, (
         f"No 'Sent download notification' log line found for broadcast {broadcast_id} in "
