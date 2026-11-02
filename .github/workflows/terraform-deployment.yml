@@ -83,12 +83,15 @@ jobs:
       account_id: "347116755493"
 
   apply-staging:
-    needs: plan-staging
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [plan-staging, apply-preview]
+    if: |
+      always() && !cancelled() && needs.plan-staging.result == 'success' &&
+      (needs.apply-preview.result == 'skipped' || needs.apply-preview.result == 'success') &&
+      github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/.terraform-apply.yml
     with:
       environment: staging
       working_directory: terraform/environments/staging
-      approval_required: false
+      approval_required: true
     secrets:
       account_id: "347116755493"
