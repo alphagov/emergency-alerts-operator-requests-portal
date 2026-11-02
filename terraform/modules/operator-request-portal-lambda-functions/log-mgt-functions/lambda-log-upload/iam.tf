@@ -87,6 +87,7 @@ locals {
   eas_invoking_account_ids = {
     "mno-portal-development" = var.eas_development_account_id # eas-development
     "mno-portal-preview"     = var.eas_preview_account_id     # eas-preview
+    "mno-portal-staging"     = var.eas_staging_account_id     # eas-staging
   }
 }
 

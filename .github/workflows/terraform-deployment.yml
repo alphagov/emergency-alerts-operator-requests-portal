@@ -72,3 +72,23 @@ jobs:
       approval_required: false
     secrets:
       account_id: "248648925010"
+
+  plan-staging:
+    needs: unit-tests
+    uses: ./.github/workflows/.terraform-plan.yml
+    with:
+      environment: staging
+      working_directory: terraform/environments/staging
+    secrets:
+      account_id: "347116755493"
+
+  apply-staging:
+    needs: plan-staging
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    uses: ./.github/workflows/.terraform-apply.yml
+    with:
+      environment: staging
+      working_directory: terraform/environments/staging
+      approval_required: false
+    secrets:
+      account_id: "347116755493"
