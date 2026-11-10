@@ -8,7 +8,7 @@ resource "aws_ssm_parameter" "notify_api_key" {
   value       = "dummy"
 
   lifecycle {
-    ignore_changes = [value]
+    ignore_changes = all
   }
 
   tags = var.tags
@@ -67,7 +67,7 @@ resource "aws_ssm_parameter" "functional_test_notify_api_key" {
   value       = "dummy"
 
   lifecycle {
-    ignore_changes = [value]
+    ignore_changes = all
   }
 
   tags = var.tags
@@ -81,7 +81,7 @@ resource "aws_ssm_parameter" "functional_test_mno_email" {
   value       = "dummy"
 
   lifecycle {
-    ignore_changes = [value]
+    ignore_changes = all
   }
 
   tags = var.tags
@@ -95,7 +95,7 @@ resource "aws_ssm_parameter" "mno_email_vodafone" {
   value       = "dummy"
 
   lifecycle {
-    ignore_changes = [value]
+    ignore_changes = all
   }
 
   tags = var.tags
@@ -109,7 +109,7 @@ resource "aws_ssm_parameter" "mno_email_o2" {
   value       = "dummy"
 
   lifecycle {
-    ignore_changes = [value]
+    ignore_changes = all
   }
 
   tags = var.tags
@@ -123,7 +123,7 @@ resource "aws_ssm_parameter" "mno_email_three" {
   value       = "dummy"
 
   lifecycle {
-    ignore_changes = [value]
+    ignore_changes = all
   }
 
   tags = var.tags
@@ -137,7 +137,7 @@ resource "aws_ssm_parameter" "mno_email_ee" {
   value       = "dummy"
 
   lifecycle {
-    ignore_changes = [value]
+    ignore_changes = all
   }
 
   tags = var.tags
@@ -151,7 +151,7 @@ resource "aws_ssm_parameter" "mno_portal_id_ee" {
   value       = "dummy"
 
   lifecycle {
-    ignore_changes = [value]
+    ignore_changes = all
   }
 
   tags = var.tags
@@ -165,7 +165,7 @@ resource "aws_ssm_parameter" "mno_portal_id_vodafone" {
   value       = "dummy"
 
   lifecycle {
-    ignore_changes = [value]
+    ignore_changes = all
   }
 
   tags = var.tags
@@ -179,7 +179,7 @@ resource "aws_ssm_parameter" "mno_portal_id_three" {
   value       = "dummy"
 
   lifecycle {
-    ignore_changes = [value]
+    ignore_changes = all
   }
 
   tags = var.tags
@@ -193,7 +193,7 @@ resource "aws_ssm_parameter" "mno_portal_id_o2" {
   value       = "dummy"
 
   lifecycle {
-    ignore_changes = [value]
+    ignore_changes = all
   }
 
   tags = var.tags
@@ -207,7 +207,7 @@ resource "aws_ssm_parameter" "mno_email_test" {
   value       = "dummy"
 
   lifecycle {
-    ignore_changes = [value]
+    ignore_changes = all
   }
 
   tags = var.tags
@@ -221,7 +221,7 @@ resource "aws_ssm_parameter" "mno_portal_id_test" {
   value       = "dummy"
 
   lifecycle {
-    ignore_changes = [value]
+    ignore_changes = all
   }
 
   tags = var.tags
@@ -234,7 +234,7 @@ resource "aws_ssm_parameter" "functional_test_mno_portal_id" {
   value       = "dummy"
 
   lifecycle {
-    ignore_changes = [value]
+    ignore_changes = all
   }
 
   tags = var.tags
