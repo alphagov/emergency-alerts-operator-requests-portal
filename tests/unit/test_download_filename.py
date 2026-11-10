@@ -40,15 +40,11 @@ MNO_LABEL = "THREE"
 
 
 def _load_upload():
-    return load_lambda_module(
-        UPLOAD_HANDLER_PATH, f"log_upload_handler_{id(object())}", env=UPLOAD_ENV
-    )
+    return load_lambda_module(UPLOAD_HANDLER_PATH, f"log_upload_handler_{id(object())}", env=UPLOAD_ENV)
 
 
 def _load_download():
-    return load_lambda_module(
-        DOWNLOAD_HANDLER_PATH, f"lambda_log_download_{id(object())}", env=DOWNLOAD_ENV
-    )
+    return load_lambda_module(DOWNLOAD_HANDLER_PATH, f"lambda_log_download_{id(object())}", env=DOWNLOAD_ENV)
 
 
 def test_sanitize_and_timestamp_helpers():
@@ -75,8 +71,7 @@ def test_upload_writes_self_descriptive_s3_key_without_portal_id_and_invite_reco
         module.lambda_handler(event, None)
 
     upload_calls = [
-        call for call in module.ddb.put_item.call_args_list
-        if call.kwargs["TableName"] == "upload-tracking"
+        call for call in module.ddb.put_item.call_args_list if call.kwargs["TableName"] == "upload-tracking"
     ]
     assert len(upload_calls) == 1
     upload_item = upload_calls[0].kwargs["Item"]
@@ -86,8 +81,7 @@ def test_upload_writes_self_descriptive_s3_key_without_portal_id_and_invite_reco
     }
 
     invite_calls = [
-        call for call in module.ddb.put_item.call_args_list
-        if call.kwargs["TableName"] == "invite-tracking"
+        call for call in module.ddb.put_item.call_args_list if call.kwargs["TableName"] == "invite-tracking"
     ]
     assert len(invite_calls) == 1
     invite_item = invite_calls[0].kwargs["Item"]
@@ -100,9 +94,7 @@ SELF_DESCRIPTIVE_KEY = f"received/logs/{BROADCAST_ID}/CBC_{MNO_LABEL}_20250512-0
 
 def test_gds_cli_command_reuses_the_actual_uploaded_filename():
     module = _load_download()
-    module.ddb.get_item.return_value = {
-        "Item": {"MnoName": {"S": "Three"}, "AlertTime": {"S": "2025-05-12T09:00:00Z"}}
-    }
+    module.ddb.get_item.return_value = {"Item": {"MnoName": {"S": "Three"}, "AlertTime": {"S": "2025-05-12T09:00:00Z"}}}
     captured = {}
 
     def _capture_invoke(FunctionName, InvocationType, Payload):

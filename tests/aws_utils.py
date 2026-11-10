@@ -47,14 +47,10 @@ def invoke_log_upload_lambda(alert_reference: str, mno_id: str, broadcast_id: st
     logger.info("Lambda response status: %s, payload: %s", status_code, raw_payload)
 
     if response.get("FunctionError"):
-        raise RuntimeError(
-            f"Lambda function error: {response['FunctionError']} — {raw_payload}"
-        )
+        raise RuntimeError(f"Lambda function error: {response['FunctionError']} — {raw_payload}")
 
     if status_code != 200:
-        raise RuntimeError(
-            f"Unexpected Lambda status code {status_code}: {raw_payload}"
-        )
+        raise RuntimeError(f"Unexpected Lambda status code {status_code}: {raw_payload}")
 
     body = json.loads(raw_payload)
     if isinstance(body.get("body"), str):
@@ -231,9 +227,7 @@ def poll_notify_for_email(
     seen = []
 
     for attempt in range(1, retries + 1):
-        logger.info(
-            "Polling Notify for email to %s (attempt %d/%d)", mno_email, attempt, retries
-        )
+        logger.info("Polling Notify for email to %s (attempt %d/%d)", mno_email, attempt, retries)
         notifications = client.get_all_notifications(template_type="email").get("notifications", [])
         seen = [
             f"{n.get('status')}: {n.get('subject')!r}"

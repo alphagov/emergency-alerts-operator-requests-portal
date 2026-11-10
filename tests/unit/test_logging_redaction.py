@@ -44,13 +44,9 @@ def _log_text(caplog) -> str:
 
 
 def test_upload_invite_send_masks_recipient_email(caplog):
-    module = load_lambda_module(
-        UPLOAD_HANDLER_PATH, f"log_upload_handler_{id(object())}", env=UPLOAD_ENV
-    )
+    module = load_lambda_module(UPLOAD_HANDLER_PATH, f"log_upload_handler_{id(object())}", env=UPLOAD_ENV)
 
-    with caplog.at_level("INFO"), mock.patch(
-        "boto3.client", side_effect=lambda *a, **k: mock.MagicMock()
-    ):
+    with caplog.at_level("INFO"), mock.patch("boto3.client", side_effect=lambda *a, **k: mock.MagicMock()):
         module.send_invite(SENSITIVE_EMAIL, "broadcast-1", "Test MNO", "MNO1")
 
     log_text = _log_text(caplog)
@@ -59,16 +55,13 @@ def test_upload_invite_send_masks_recipient_email(caplog):
 
 
 def test_download_link_send_masks_recipient_email(caplog):
-    module = load_lambda_module(
-        DOWNLOAD_HANDLER_PATH, f"lambda_log_download_{id(object())}", env=DOWNLOAD_ENV
-    )
+    module = load_lambda_module(DOWNLOAD_HANDLER_PATH, f"lambda_log_download_{id(object())}", env=DOWNLOAD_ENV)
     module.recipients = [SENSITIVE_EMAIL]
     module.ddb.get_item.return_value = {"Item": {"MnoName": {"S": "Test MNO"}, "AlertTime": {"S": ""}}}
 
     with caplog.at_level("INFO"):
         module.send_notification(
-            "broadcast-1", "MNO1", "log-bucket",
-            "received/logs/broadcast-1/CBC_MNO1_20250101-0000Z_broadcast-1.zip"
+            "broadcast-1", "MNO1", "log-bucket", "received/logs/broadcast-1/CBC_MNO1_20250101-0000Z_broadcast-1.zip"
         )
 
     log_text = _log_text(caplog)
@@ -77,9 +70,7 @@ def test_download_link_send_masks_recipient_email(caplog):
 
 
 def test_mask_email_helper():
-    module = load_lambda_module(
-        UPLOAD_HANDLER_PATH, f"log_upload_handler_{id(object())}", env=UPLOAD_ENV
-    )
+    module = load_lambda_module(UPLOAD_HANDLER_PATH, f"log_upload_handler_{id(object())}", env=UPLOAD_ENV)
     assert module._mask_email("a@b.gov.uk") == "a***@b.gov.uk"
     assert module._mask_email("not-an-email") == "***"
 

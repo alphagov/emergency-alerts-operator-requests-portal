@@ -50,7 +50,8 @@ def test_unknown_mno_or_broadcast(mno_portal_id, broadcast_id):
 
 def test_expired_link(mno_portal_id, broadcast_id):
     put_upload_tracking_record(
-        mno_portal_id, broadcast_id,
+        mno_portal_id,
+        broadcast_id,
         s3_location=f"/received/logs/{broadcast_id}/CBC_TEST_00000000-0000Z_{broadcast_id}.zip",
         expires_in_seconds=-3600,
     )
@@ -61,7 +62,8 @@ def test_expired_link(mno_portal_id, broadcast_id):
 
 def test_already_used_link(mno_portal_id, broadcast_id):
     put_upload_tracking_record(
-        mno_portal_id, broadcast_id,
+        mno_portal_id,
+        broadcast_id,
         s3_location=f"/received/logs/{broadcast_id}/CBC_TEST_00000000-0000Z_{broadcast_id}.zip",
         used=True,
     )
@@ -107,8 +109,10 @@ def test_empty_file(mno_portal_id, broadcast_id):
 def test_malformed_query_params(broadcast_id):
     resp = requests.put(
         f"{config['portal_url']}/log-upload?mno=%00%ff&broadcast_id={broadcast_id}",
-        data=b"x", timeout=30,
+        data=b"x",
+        timeout=30,
     )
-    assert resp.status_code in (400, 403), (
-        f"Expected a graceful client error, got {resp.status_code}: {resp.text[:300]}"
-    )
+    assert resp.status_code in (
+        400,
+        403,
+    ), f"Expected a graceful client error, got {resp.status_code}: {resp.text[:300]}"

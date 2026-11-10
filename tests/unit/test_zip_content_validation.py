@@ -40,7 +40,7 @@ def _mock_s3_object(module, content: bytes):
     def _get_object(Bucket, Key, Range):
         start, end = (int(part) for part in Range.replace("bytes=", "").split("-"))
         body = mock.MagicMock()
-        body.read.return_value = content[start:end + 1]
+        body.read.return_value = content[start : end + 1]
         return {"Body": body}
 
     module.s3.get_object.side_effect = _get_object
@@ -87,9 +87,7 @@ def test_is_zip_content_reads_from_the_bucket_named_in_the_event_not_a_hardcoded
 
     module._is_zip_content(BUCKET, "received/logs/x/CBC_x_MNO1.zip")
 
-    module.s3.head_object.assert_called_once_with(
-        Bucket=BUCKET, Key="received/logs/x/CBC_x_MNO1.zip"
-    )
+    module.s3.head_object.assert_called_once_with(Bucket=BUCKET, Key="received/logs/x/CBC_x_MNO1.zip")
     for call in module.s3.get_object.call_args_list:
         assert call.kwargs["Bucket"] == BUCKET
 
@@ -136,6 +134,4 @@ def test_lambda_handler_sends_notification_for_valid_zip():
     module.lambda_handler(event, None)
 
     module.lambda_cli.invoke.assert_called_once()
-    module.s3.head_object.assert_called_once_with(
-        Bucket=BUCKET, Key=SELF_DESCRIPTIVE_KEY
-    )
+    module.s3.head_object.assert_called_once_with(Bucket=BUCKET, Key=SELF_DESCRIPTIVE_KEY)

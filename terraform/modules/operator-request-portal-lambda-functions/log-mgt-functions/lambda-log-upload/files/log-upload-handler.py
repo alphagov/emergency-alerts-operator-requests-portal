@@ -1,8 +1,9 @@
-import os
 import json
 import logging
+import os
 import re
 from datetime import datetime, timedelta, timezone
+
 import boto3
 
 logger = logging.getLogger()
@@ -89,10 +90,7 @@ def _invite_key(mno_id: str, broadcast_id: str) -> str:
 
 
 def already_invited(mno_id: str, broadcast_id: str) -> bool:
-    resp = ddb.get_item(
-        TableName=LOG_INVITE_TRACKING_TABLE,
-        Key={"AlertRef": {"S": _invite_key(mno_id, broadcast_id)}}
-    )
+    resp = ddb.get_item(TableName=LOG_INVITE_TRACKING_TABLE, Key={"AlertRef": {"S": _invite_key(mno_id, broadcast_id)}})
     return "Item" in resp
 
 
@@ -104,14 +102,12 @@ def mark_invited(mno_label: str, broadcast_id: str, mno_name: str, alert_time: s
             "AlertRef": {"S": _invite_key(mno_label, broadcast_id)},
             "InvitedAt": {"S": datetime.now(timezone.utc).isoformat()},
             "MnoName": {"S": mno_name},
-            "AlertTime": {"S": alert_time}
-        }
+            "AlertTime": {"S": alert_time},
+        },
     )
 
 
-def register_upload_reference(
-    mno_id: str, broadcast_id: str, s3_location: str, mno_name: str
-) -> bool:
+def register_upload_reference(mno_id: str, broadcast_id: str, s3_location: str, mno_name: str) -> bool:
     key = _invite_key(mno_id, broadcast_id)
     expires_at = (datetime.now(timezone.utc) + timedelta(seconds=EXPIRY_SECONDS)).isoformat()
     try:
@@ -125,9 +121,9 @@ def register_upload_reference(
                 "S3Location": {"S": s3_location},
                 "MnoId": {"S": mno_id},
                 "MnoName": {"S": mno_name},
-                "BroadcastId": {"S": broadcast_id}
+                "BroadcastId": {"S": broadcast_id},
             },
-            ConditionExpression="attribute_not_exists(RequestId)"
+            ConditionExpression="attribute_not_exists(RequestId)",
         )
         logger.info(f"Registered upload reference {_mask_key(key)} → {s3_location}")
         return True
@@ -151,14 +147,12 @@ def send_invite(email: str, broadcast_id: str, mno_name: str, portal_id: str):
             "MNO": mno_name,
             "uploadSite": upload_site,
             "portalUploadHelp": portal_upload_help,
-        }
+        },
     }
     try:
         lambda_client = boto3.client("lambda")
         lambda_client.invoke(
-            FunctionName=NOTIFY_LAMBDA_ARN,
-            InvocationType="Event",
-            Payload=json.dumps(payload).encode("utf-8")
+            FunctionName=NOTIFY_LAMBDA_ARN, InvocationType="Event", Payload=json.dumps(payload).encode("utf-8")
         )
         logger.info(
             f"Sent invite to {_mask_email(email)} for MNO {mno_name} ({_mask_portal_id(portal_id)}) "
@@ -230,9 +224,7 @@ def lambda_handler(event, context):
     logger.info(f"Sent {len(invites_sent)} upload invite(s) for alert {alert_ref}")
     return {
         "statusCode": 200,
-        "body": json.dumps({
-            "message": "Log upload invites sent",
-            "alert_reference": alert_ref,
-            "links_generated": len(invites_sent)
-        })
+        "body": json.dumps(
+            {"message": "Log upload invites sent", "alert_reference": alert_ref, "links_generated": len(invites_sent)}
+        ),
     }

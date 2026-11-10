@@ -1,9 +1,10 @@
-import os
 import json
 import logging
-from datetime import datetime
-import boto3
+import os
 import re
+from datetime import datetime
+
+import boto3
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -20,9 +21,7 @@ ddb = boto3.client("dynamodb")
 lambda_cli = boto3.client("lambda")
 s3 = boto3.client("s3")
 
-KEY_RE = re.compile(
-    r"^received/logs/(?P<alert>[^/]+)/CBC_(?P<mno>[^_]+)_[^_]+_(?P=alert)\.zip$"
-)
+KEY_RE = re.compile(r"^received/logs/(?P<alert>[^/]+)/CBC_(?P<mno>[^_]+)_[^_]+_(?P=alert)\.zip$")
 
 ZIP_HEADER_SIGNATURES = (b"PK\x03\x04", b"PK\x05\x06")
 EOCD_SIGNATURE = b"PK\x05\x06"
@@ -75,10 +74,7 @@ def _get_upload_record(mno_label: str, broadcast_id: str) -> dict:
     """
     key = f"{mno_label}#{broadcast_id}"
     try:
-        resp = ddb.get_item(
-            TableName=LOG_INVITE_TRACKING_TABLE,
-            Key={"AlertRef": {"S": key}}
-        )
+        resp = ddb.get_item(TableName=LOG_INVITE_TRACKING_TABLE, Key={"AlertRef": {"S": key}})
         item = resp.get("Item", {})
         mno_name = item.get("MnoName", {}).get("S") or mno_label
         alert_time = item.get("AlertTime", {}).get("S") or ""
@@ -114,17 +110,13 @@ def send_notification(broadcast_id: str, mno_label: str, bucket: str, key: str):
                 "broadcastId": broadcast_id,
                 "MNO": mno_name,
                 "alertTime": alert_time,
-                "gdsCliDownloadCommand": gds_cli_command
-            }
+                "gdsCliDownloadCommand": gds_cli_command,
+            },
         }
         lambda_cli.invoke(
-            FunctionName=NOTIFY_LAMBDA_ARN,
-            InvocationType="Event",
-            Payload=json.dumps(payload).encode("utf-8")
+            FunctionName=NOTIFY_LAMBDA_ARN, InvocationType="Event", Payload=json.dumps(payload).encode("utf-8")
         )
-        logger.info(
-            "Sent download notification for %s/%s to %s", broadcast_id, mno_name, _mask_email(email)
-        )
+        logger.info("Sent download notification for %s/%s to %s", broadcast_id, mno_name, _mask_email(email))
 
 
 def lambda_handler(event, context):
@@ -143,10 +135,7 @@ def lambda_handler(event, context):
         mno_label = m.group("mno")
 
         if not _is_zip_content(bucket, key):
-            logger.warning(
-                "Rejected upload with non-ZIP content for broadcast_id=%s, mno=%s",
-                broadcast_id, mno_label
-            )
+            logger.warning("Rejected upload with non-ZIP content for broadcast_id=%s, mno=%s", broadcast_id, mno_label)
             continue
 
         logger.info("New logs for broadcast_id=%s, mno=%s", broadcast_id, mno_label)

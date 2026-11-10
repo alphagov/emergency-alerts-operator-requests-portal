@@ -17,9 +17,7 @@ def main():
     working_dir = sys.argv[1]
     suites = sys.argv[2:]
 
-    report_paths = [
-        f"{working_dir}/functional-test-reports/{suite}" for suite in suites
-    ]
+    report_paths = [f"{working_dir}/functional-test-reports/{suite}" for suite in suites]
 
     pattern = r'(errors|failures)="([1-9][0-9]*)"'
 

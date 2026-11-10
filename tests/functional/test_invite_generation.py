@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 
 from config import config
 from tests.aws_utils import (
-    wait_for_cloudwatch_logs,
     get_invite_tracking_record,
     get_upload_tracking_record,
     invoke_log_upload_lambda,
+    wait_for_cloudwatch_logs,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,14 +39,14 @@ def test_duplicate_invite_is_idempotent(broadcast_id, mno_id, mno_label):
 
     second = invoke_log_upload_lambda(alert_reference, mno_id, broadcast_id)
     assert second.get("statusCode") == 200
-    assert second.get("body", {}).get("links_generated") == 0, (
-        "Duplicate invite should be skipped, not generate a second link"
-    )
+    assert (
+        second.get("body", {}).get("links_generated") == 0
+    ), "Duplicate invite should be skipped, not generate a second link"
 
     second_record = get_invite_tracking_record(mno_label, broadcast_id)
-    assert second_record["InvitedAt"]["S"] == first_invited_at, (
-        "Invite tracking record should be untouched by the duplicate call"
-    )
+    assert (
+        second_record["InvitedAt"]["S"] == first_invited_at
+    ), "Invite tracking record should be untouched by the duplicate call"
 
 
 def test_invite_for_unknown_mno_does_not_crash(broadcast_id, mno_label):
@@ -61,9 +61,9 @@ def test_invite_for_unknown_mno_does_not_crash(broadcast_id, mno_label):
     assert response.get("statusCode") == 200, "Unknown MNO should not crash the Lambda"
     assert response.get("body", {}).get("links_generated") == 0
 
-    assert get_invite_tracking_record(unknown_mno_id.upper(), broadcast_id) is None, (
-        "No invite tracking record should be written for an unresolvable MNO"
-    )
+    assert (
+        get_invite_tracking_record(unknown_mno_id.upper(), broadcast_id) is None
+    ), "No invite tracking record should be written for an unresolvable MNO"
 
 
 def test_invite_link_expiry_window(broadcast_id, mno_id, mno_portal_id):
@@ -80,9 +80,9 @@ def test_invite_link_expiry_window(broadcast_id, mno_id, mno_portal_id):
     expires_at = datetime.fromisoformat(record["ExpiresAt"]["S"])
     created_at = datetime.fromisoformat(record["CreatedAt"]["S"])
     delta = expires_at - created_at
-    assert timedelta(days=6, hours=23) < delta < timedelta(days=7, hours=1), (
-        f"Expected ~7 day expiry window, got {delta}"
-    )
+    assert (
+        timedelta(days=6, hours=23) < delta < timedelta(days=7, hours=1)
+    ), f"Expected ~7 day expiry window, got {delta}"
 
 
 def test_invite_pii_masked_in_logs(broadcast_id, mno_id, mno_email):

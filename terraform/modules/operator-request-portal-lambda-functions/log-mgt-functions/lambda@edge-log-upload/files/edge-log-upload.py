@@ -1,6 +1,6 @@
+import logging
 import os
 import re
-import logging
 from datetime import datetime, timezone
 from urllib.parse import parse_qs
 
@@ -11,14 +11,9 @@ logger.setLevel(logging.INFO)
 
 TRACK_TABLE = "operator-request-portal-log-uploads"
 
-ddb = boto3.client(
-    "dynamodb",
-    region_name=os.environ.get("DYNAMODB_REGION", "eu-west-2")
-)
+ddb = boto3.client("dynamodb", region_name=os.environ.get("DYNAMODB_REGION", "eu-west-2"))
 
-S3_KEY_RE = re.compile(
-    r"^/received/logs/(?P<broadcast>[^/]+)/CBC_[^_]+_[^_]+_(?P=broadcast)\.zip$"
-)
+S3_KEY_RE = re.compile(r"^/received/logs/(?P<broadcast>[^/]+)/CBC_[^_]+_[^_]+_(?P=broadcast)\.zip$")
 
 MNO_ID_HEADER_NAME = "x-upload-token"
 
@@ -39,7 +34,7 @@ def _mask_key(composite_key: str) -> str:
 def error_response(status_code: int, status_desc: str, body: str, error_type: str = None) -> dict:
     headers = {
         "cache-control": [{"key": "Cache-Control", "value": "no-cache"}],
-        "content-type": [{"key": "Content-Type", "value": "text/html; charset=utf-8"}]
+        "content-type": [{"key": "Content-Type", "value": "text/html; charset=utf-8"}],
     }
     if error_type:
         headers["x-error-type"] = [{"key": "X-Error-Type", "value": error_type}]
@@ -48,7 +43,7 @@ def error_response(status_code: int, status_desc: str, body: str, error_type: st
         "statusDescription": status_desc,
         "body": body,
         "bodyEncoding": "text",
-        "headers": headers
+        "headers": headers,
     }
 
 
@@ -94,8 +89,8 @@ def _mark_used(composite_key: str):
             ExpressionAttributeValues={
                 ":true": {"BOOL": True},
                 ":false": {"BOOL": False},
-                ":now": {"S": datetime.now(timezone.utc).isoformat()}
-            }
+                ":now": {"S": datetime.now(timezone.utc).isoformat()},
+            },
         )
         return None
     except ddb.exceptions.ConditionalCheckFailedException:
@@ -149,12 +144,12 @@ def _handle_viewer_request(req):
 
     req["uri"] = s3_location
     req["querystring"] = ""
-    req.setdefault("headers", {})[MNO_ID_HEADER_NAME] = [
-        {"key": "X-Upload-Token", "value": mno_id}
-    ]
+    req.setdefault("headers", {})[MNO_ID_HEADER_NAME] = [{"key": "X-Upload-Token", "value": mno_id}]
     logger.info(
         "Upload validated, forwarding to origin: uri=%s (mno=%s, broadcast_id=%s)",
-        req["uri"], _mask_portal_id(mno_id), broadcast_id
+        req["uri"],
+        _mask_portal_id(mno_id),
+        broadcast_id,
     )
     return req
 
@@ -176,7 +171,9 @@ def _handle_origin_response(request, response):
     if not status.startswith("2"):
         logger.warning(
             "Origin write failed (status=%s) for mno=%s broadcast_id=%s; upload link left unused for retry",
-            status, _mask_portal_id(mno_id), broadcast_id
+            status,
+            _mask_portal_id(mno_id),
+            broadcast_id,
         )
         return response
 
