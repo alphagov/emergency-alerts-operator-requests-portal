@@ -32,17 +32,7 @@ resource "aws_iam_role_policy" "log_upload_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:*:*:*"
-      },
-
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:PutObject"
-        ]
-        Resource = [
-          "arn:aws:s3:::${var.log_bucket_name}/received/logs/*"
-        ]
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${var.environment}-log-upload-handler:*"
       },
 
       {
@@ -96,11 +86,6 @@ resource "aws_lambda_permission" "allow_eas_api_invoke" {
   statement_id  = "AllowEASAPIInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.log_upload.function_name
-  principal     = local.eas_invoking_account_ids[var.environment]
+  principal     = "arn:aws:iam::${local.eas_invoking_account_ids[var.environment]}:root"
 }
 
-
-moved {
-  from = aws_lambda_permission.allow_eas_api_invoke_development
-  to   = aws_lambda_permission.allow_eas_api_invoke[0]
-}

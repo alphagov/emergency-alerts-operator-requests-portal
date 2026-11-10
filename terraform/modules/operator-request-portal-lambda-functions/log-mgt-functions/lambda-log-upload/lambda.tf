@@ -15,8 +15,7 @@ resource "aws_lambda_function" "log_upload" {
 
   environment {
     variables = {
-      LOG_BUCKET_NAME            = var.log_bucket_name
-      UPLOAD_DOMAIN              = local.default_upload_domain
+      UPLOAD_DOMAIN              = var.upload_domain
       NOTIFY_LAMBDA_ARN          = var.notify_lambda_arn
       NOTIFY_LOG_TEMPLATE_ID     = var.notify_log_template_id
       UPLOAD_LINK_EXPIRY_SECONDS = tostring(var.upload_link_expiry_seconds)

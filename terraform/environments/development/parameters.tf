@@ -145,7 +145,7 @@ resource "aws_ssm_parameter" "mno_email_ee" {
 
 resource "aws_ssm_parameter" "mno_portal_id_ee" {
   name        = "/operator-portal/mno-ids/ee"
-  description = "6-character portal identifier for EE"
+  description = "32-character portal identifier for EE"
   type        = "SecureString"
   key_id      = "alias/aws/ssm"
   value       = "dummy"
@@ -159,7 +159,7 @@ resource "aws_ssm_parameter" "mno_portal_id_ee" {
 
 resource "aws_ssm_parameter" "mno_portal_id_vodafone" {
   name        = "/operator-portal/mno-ids/vodafone"
-  description = "6-character portal identifier for Vodafone"
+  description = "32-character portal identifier for Vodafone"
   type        = "SecureString"
   key_id      = "alias/aws/ssm"
   value       = "dummy"
@@ -173,7 +173,7 @@ resource "aws_ssm_parameter" "mno_portal_id_vodafone" {
 
 resource "aws_ssm_parameter" "mno_portal_id_three" {
   name        = "/operator-portal/mno-ids/three"
-  description = "6-character portal identifier for Three"
+  description = "32-character portal identifier for Three"
   type        = "SecureString"
   key_id      = "alias/aws/ssm"
   value       = "dummy"
@@ -187,7 +187,7 @@ resource "aws_ssm_parameter" "mno_portal_id_three" {
 
 resource "aws_ssm_parameter" "mno_portal_id_o2" {
   name        = "/operator-portal/mno-ids/o2"
-  description = "6-character portal identifier for O2"
+  description = "32-character portal identifier for O2"
   type        = "SecureString"
   key_id      = "alias/aws/ssm"
   value       = "dummy"
@@ -215,7 +215,7 @@ resource "aws_ssm_parameter" "mno_email_test" {
 
 resource "aws_ssm_parameter" "mno_portal_id_test" {
   name        = "/operator-portal/mno-ids/test_mno_001"
-  description = "6-character portal identifier for the TEST_MNO_001 functional test operator"
+  description = "32-character portal identifier for the TEST_MNO_001 functional test operator"
   type        = "SecureString"
   key_id      = "alias/aws/ssm"
   value       = "dummy"
@@ -229,7 +229,7 @@ resource "aws_ssm_parameter" "mno_portal_id_test" {
 
 resource "aws_ssm_parameter" "functional_test_mno_portal_id" {
   name        = "/operator-portal/functional-tests/test-mno-portal-id"
-  description = "Resolved 6-character portal identifier for the functional test MNO (used by test assertions)"
+  description = "Resolved 32-character portal identifier for the functional test MNO (used by test assertions)"
   type        = "String"
   value       = "dummy"
 

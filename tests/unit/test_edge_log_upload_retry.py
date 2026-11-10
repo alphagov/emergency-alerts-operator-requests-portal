@@ -102,9 +102,7 @@ def test_lambda_handler_dispatches_origin_response_only_after_viewer_request():
     """End-to-end: simulate CloudFront's two invocations for one PUT — viewer-request
     must not consume the link, and only a successful origin-response should."""
     module = _load()
-    module.ddb.get_item.return_value = {
-        "Item": {"Used": {"BOOL": False}, "S3Location": {"S": _s3_uri()}}
-    }
+    module.ddb.get_item.return_value = {"Item": {"Used": {"BOOL": False}, "S3Location": {"S": _s3_uri()}}}
 
     viewer_event = {
         "Records": [

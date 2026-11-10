@@ -1,81 +1,6 @@
-data "aws_caller_identity" "current" {}
-
 resource "aws_ssm_parameter" "notify_api_key" {
   name        = "/operator-portal/notify-client-api-key"
   description = "GOV.UK Notify API key for sending emails from the operator portal"
-  type        = "SecureString"
-  key_id      = "alias/aws/ssm"
-  value       = "dummy"
-
-  lifecycle {
-    ignore_changes = all
-  }
-
-  tags = var.tags
-}
-
-resource "aws_ssm_parameter" "functional_test_account_id" {
-  name        = "/operator-portal/functional-tests/account-id"
-  description = "AWS account ID for the MNO portal — used by CodeBuild to assume the eas-terraformer role"
-  type        = "String"
-  value       = data.aws_caller_identity.current.account_id
-
-  tags = var.tags
-}
-
-resource "aws_ssm_parameter" "functional_test_environment" {
-  name        = "/operator-portal/functional-tests/environment"
-  description = "Environment name — used by CodeBuild to construct the eas-terraformer external ID"
-  type        = "String"
-  value       = var.environment
-
-  tags = var.tags
-}
-
-resource "aws_ssm_parameter" "functional_test_log_upload_lambda_name" {
-  name        = "/operator-portal/functional-tests/log-upload-lambda-name"
-  description = "Name of the log upload handler Lambda invoked by the functional tests"
-  type        = "String"
-  value       = "${var.environment}-log-upload-handler"
-
-  tags = var.tags
-}
-
-resource "aws_ssm_parameter" "functional_test_log_bucket_name" {
-  name        = "/operator-portal/functional-tests/log-bucket-name"
-  description = "Name of the S3 bucket the functional tests assert log files land in"
-  type        = "String"
-  value       = module.operator_request_portal_static_site.s3_bucket_name
-
-  tags = var.tags
-}
-
-resource "aws_ssm_parameter" "functional_test_mno_id" {
-  name        = "/operator-portal/functional-tests/test-mno-id"
-  description = "MNO ID used by the functional tests when invoking the log upload handler"
-  type        = "String"
-  value       = "TEST_MNO_001"
-
-  tags = var.tags
-}
-
-resource "aws_ssm_parameter" "functional_test_notify_api_key" {
-  name        = "/operator-portal/functional-tests/notify-api-key"
-  description = "GOV.UK Notify API key used by the functional tests to poll for delivered emails"
-  type        = "SecureString"
-  key_id      = "alias/aws/ssm"
-  value       = "dummy"
-
-  lifecycle {
-    ignore_changes = all
-  }
-
-  tags = var.tags
-}
-
-resource "aws_ssm_parameter" "functional_test_mno_email" {
-  name        = "/operator-portal/functional-tests/test-mno-email"
-  description = "Email address the functional tests expect the log upload invite to be delivered to"
   type        = "SecureString"
   key_id      = "alias/aws/ssm"
   value       = "dummy"
@@ -145,7 +70,7 @@ resource "aws_ssm_parameter" "mno_email_ee" {
 
 resource "aws_ssm_parameter" "mno_portal_id_ee" {
   name        = "/operator-portal/mno-ids/ee"
-  description = "6-character portal identifier for EE"
+  description = "32-character portal identifier for EE"
   type        = "SecureString"
   key_id      = "alias/aws/ssm"
   value       = "dummy"
@@ -159,7 +84,7 @@ resource "aws_ssm_parameter" "mno_portal_id_ee" {
 
 resource "aws_ssm_parameter" "mno_portal_id_vodafone" {
   name        = "/operator-portal/mno-ids/vodafone"
-  description = "6-character portal identifier for Vodafone"
+  description = "32-character portal identifier for Vodafone"
   type        = "SecureString"
   key_id      = "alias/aws/ssm"
   value       = "dummy"
@@ -173,7 +98,7 @@ resource "aws_ssm_parameter" "mno_portal_id_vodafone" {
 
 resource "aws_ssm_parameter" "mno_portal_id_three" {
   name        = "/operator-portal/mno-ids/three"
-  description = "6-character portal identifier for Three"
+  description = "32-character portal identifier for Three"
   type        = "SecureString"
   key_id      = "alias/aws/ssm"
   value       = "dummy"
@@ -187,50 +112,9 @@ resource "aws_ssm_parameter" "mno_portal_id_three" {
 
 resource "aws_ssm_parameter" "mno_portal_id_o2" {
   name        = "/operator-portal/mno-ids/o2"
-  description = "6-character portal identifier for O2"
+  description = "32-character portal identifier for O2"
   type        = "SecureString"
   key_id      = "alias/aws/ssm"
-  value       = "dummy"
-
-  lifecycle {
-    ignore_changes = all
-  }
-
-  tags = var.tags
-}
-
-resource "aws_ssm_parameter" "mno_email_test" {
-  name        = "/operator-portal/mno-emails/test_mno_001"
-  description = "Email address for the TEST_MNO_001 functional test operator — without this, the log-upload-handler Lambda finds no emails and skips the invite entirely (links_generated stays 0)"
-  type        = "SecureString"
-  key_id      = "alias/aws/ssm"
-  value       = "dummy"
-
-  lifecycle {
-    ignore_changes = all
-  }
-
-  tags = var.tags
-}
-
-resource "aws_ssm_parameter" "mno_portal_id_test" {
-  name        = "/operator-portal/mno-ids/test_mno_001"
-  description = "6-character portal identifier for the TEST_MNO_001 functional test operator"
-  type        = "SecureString"
-  key_id      = "alias/aws/ssm"
-  value       = "dummy"
-
-  lifecycle {
-    ignore_changes = all
-  }
-
-  tags = var.tags
-}
-
-resource "aws_ssm_parameter" "functional_test_mno_portal_id" {
-  name        = "/operator-portal/functional-tests/test-mno-portal-id"
-  description = "Resolved 6-character portal identifier for the functional test MNO (used by test assertions)"
-  type        = "String"
   value       = "dummy"
 
   lifecycle {

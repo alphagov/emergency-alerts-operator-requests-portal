@@ -1,20 +1,21 @@
-import os
 import json
 import logging
+import os
 import re
 from datetime import datetime, timedelta, timezone
+
 import boto3
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-LOG_BUCKET = os.environ["LOG_BUCKET_NAME"]
 UPLOAD_DOMAIN = os.environ["UPLOAD_DOMAIN"]
 NOTIFY_LAMBDA_ARN = os.environ["NOTIFY_LAMBDA_ARN"]
 NOTIFY_TEMPLATE_ID = os.environ["NOTIFY_LOG_TEMPLATE_ID"]
 LOG_INVITE_TRACKING_TABLE = os.environ["LOG_INVITE_TRACKING_TABLE"]
 LOG_UPLOAD_TRACKING_TABLE = os.environ["LOG_UPLOAD_TRACKING_TABLE"]
-EXPIRY_SECONDS = int(os.environ.get("UPLOAD_LINK_EXPIRY_SECONDS", "604800"))
+# Upload links expire this long after the broadcast start (MNOs upload within 2 days of the broadcast)
+EXPIRY_SECONDS = int(os.environ.get("UPLOAD_LINK_EXPIRY_SECONDS", "172800"))
 MNO_EMAIL_SSM_PREFIX = os.environ.get("MNO_EMAIL_SSM_PREFIX", "/operator-portal/mno-emails")
 MNO_ID_SSM_PREFIX = os.environ.get("MNO_ID_SSM_PREFIX", "/operator-portal/mno-ids")
 
@@ -57,6 +58,19 @@ def _mask_email(email: str) -> str:
     return f"{masked_local}@{domain}"
 
 
+def _mask_portal_id(portal_id: str) -> str:
+    """Log-safe form of an MNO portal identifier: keeps a short prefix for tracing, masks the rest."""
+    if not portal_id or len(portal_id) <= 8:
+        return "***"
+    return f"{portal_id[:4]}***"
+
+
+def _mask_key(composite_key: str) -> str:
+    """Log-safe form of a '<portal_id>#<broadcast_id>' tracking key."""
+    portal_id, sep, broadcast_id = composite_key.partition("#")
+    return f"{_mask_portal_id(portal_id)}{sep}{broadcast_id}"
+
+
 def _sanitize_for_filename(value: str) -> str:
     cleaned = re.sub(r"[^A-Za-z0-9-]+", "-", value).strip("-")
     return cleaned.upper() or "UNKNOWN"
@@ -77,31 +91,44 @@ def _invite_key(mno_id: str, broadcast_id: str) -> str:
 
 
 def already_invited(mno_id: str, broadcast_id: str) -> bool:
-    resp = ddb.get_item(
-        TableName=LOG_INVITE_TRACKING_TABLE,
-        Key={"AlertRef": {"S": _invite_key(mno_id, broadcast_id)}}
-    )
+    resp = ddb.get_item(TableName=LOG_INVITE_TRACKING_TABLE, Key={"AlertRef": {"S": _invite_key(mno_id, broadcast_id)}})
     return "Item" in resp
 
 
-def mark_invited(mno_label: str, broadcast_id: str, mno_name: str, alert_time: str):
-
+def mark_invited(mno_label: str, broadcast_id: str, mno_name: str, alert_time: str, upload_request_id: str):
+    """
+    upload_request_id is the key of the upload link record, kept so the link can be released
+    for a re-upload if the uploaded file is rejected.
+    """
     ddb.put_item(
         TableName=LOG_INVITE_TRACKING_TABLE,
         Item={
             "AlertRef": {"S": _invite_key(mno_label, broadcast_id)},
             "InvitedAt": {"S": datetime.now(timezone.utc).isoformat()},
             "MnoName": {"S": mno_name},
-            "AlertTime": {"S": alert_time}
-        }
+            "AlertTime": {"S": alert_time},
+            "UploadRequestId": {"S": upload_request_id},
+        },
     )
 
 
+def _upload_link_expiry(broadcast_start: str) -> datetime:
+    """Links expire EXPIRY_SECONDS after the broadcast start, or after now if the start time is missing."""
+    try:
+        start = datetime.fromisoformat(broadcast_start.replace("Z", "+00:00"))
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+    except (AttributeError, ValueError):
+        logger.warning(f"Invalid broadcast_start '{broadcast_start}', timing upload link expiry from now")
+        start = datetime.now(timezone.utc)
+    return start + timedelta(seconds=EXPIRY_SECONDS)
+
+
 def register_upload_reference(
-    mno_id: str, broadcast_id: str, s3_location: str, mno_name: str
+    mno_id: str, broadcast_id: str, s3_location: str, mno_name: str, broadcast_start: str
 ) -> bool:
     key = _invite_key(mno_id, broadcast_id)
-    expires_at = (datetime.now(timezone.utc) + timedelta(seconds=EXPIRY_SECONDS)).isoformat()
+    expires_at = _upload_link_expiry(broadcast_start).isoformat()
     try:
         ddb.put_item(
             TableName=LOG_UPLOAD_TRACKING_TABLE,
@@ -113,27 +140,18 @@ def register_upload_reference(
                 "S3Location": {"S": s3_location},
                 "MnoId": {"S": mno_id},
                 "MnoName": {"S": mno_name},
-                "BroadcastId": {"S": broadcast_id}
+                "BroadcastId": {"S": broadcast_id},
             },
-            ConditionExpression="attribute_not_exists(RequestId)"
+            ConditionExpression="attribute_not_exists(RequestId)",
         )
-        logger.info(f"Registered upload reference {key} → {s3_location}")
+        logger.info(f"Registered upload reference {_mask_key(key)} → {s3_location}")
         return True
     except ddb.exceptions.ConditionalCheckFailedException:
-        logger.warning(f"Upload reference {key} already exists")
+        logger.warning(f"Upload reference {_mask_key(key)} already exists")
         return False
     except Exception as e:
-        logger.error(f"Error registering upload reference {key}: {e}")
+        logger.error(f"Error registering upload reference {_mask_key(key)}: {e}")
         return False
-
-
-def prepare_folder(broadcast_id: str):
-    try:
-        s3 = boto3.client("s3")
-        s3.put_object(Bucket=LOG_BUCKET, Key=f"received/logs/{broadcast_id}/")
-        logger.info(f"Created S3 prefix: received/logs/{broadcast_id}/")
-    except Exception as e:
-        logger.error(f"Error creating S3 prefix for broadcast {broadcast_id}: {e}")
 
 
 def send_invite(email: str, broadcast_id: str, mno_name: str, portal_id: str):
@@ -148,17 +166,16 @@ def send_invite(email: str, broadcast_id: str, mno_name: str, portal_id: str):
             "MNO": mno_name,
             "uploadSite": upload_site,
             "portalUploadHelp": portal_upload_help,
-        }
+        },
     }
     try:
         lambda_client = boto3.client("lambda")
         lambda_client.invoke(
-            FunctionName=NOTIFY_LAMBDA_ARN,
-            InvocationType="Event",
-            Payload=json.dumps(payload).encode("utf-8")
+            FunctionName=NOTIFY_LAMBDA_ARN, InvocationType="Event", Payload=json.dumps(payload).encode("utf-8")
         )
         logger.info(
-            f"Sent invite to {_mask_email(email)} for MNO {mno_name} ({portal_id}) broadcast {broadcast_id}"
+            f"Sent invite to {_mask_email(email)} for MNO {mno_name} ({_mask_portal_id(portal_id)}) "
+            f"broadcast {broadcast_id}"
         )
     except Exception as e:
         logger.error(f"Error sending invite to {_mask_email(email)}: {e}")
@@ -200,7 +217,10 @@ def lambda_handler(event, context):
         mno_label = _sanitize_for_filename(mno_id)
 
         if already_invited(mno_label, broadcast_id):
-            logger.info(f"Invite for MNO {mno_id} ({portal_id}) broadcast {broadcast_id} already sent, skipping")
+            logger.info(
+                f"Invite for MNO {mno_id} ({_mask_portal_id(portal_id)}) broadcast {broadcast_id} "
+                "already sent, skipping"
+            )
             continue
 
         emails = _get_mno_emails(mno_id)
@@ -211,10 +231,9 @@ def lambda_handler(event, context):
         broadcast_start = event.get("broadcast_start", "")
         filename = f"CBC_{mno_label}_{_format_timestamp_for_filename(broadcast_start)}_{broadcast_id}.zip"
         s3_location = f"/received/logs/{broadcast_id}/{filename}"
-        prepare_folder(broadcast_id)
-        register_upload_reference(portal_id, broadcast_id, s3_location, mno_id)
+        register_upload_reference(portal_id, broadcast_id, s3_location, mno_id, broadcast_start)
 
-        mark_invited(mno_label, broadcast_id, mno_id, broadcast_start)
+        mark_invited(mno_label, broadcast_id, mno_id, broadcast_start, _invite_key(portal_id, broadcast_id))
 
         for email in emails:
             send_invite(email, broadcast_id, mno_id, portal_id)
@@ -224,9 +243,7 @@ def lambda_handler(event, context):
     logger.info(f"Sent {len(invites_sent)} upload invite(s) for alert {alert_ref}")
     return {
         "statusCode": 200,
-        "body": json.dumps({
-            "message": "Log upload invites sent",
-            "alert_reference": alert_ref,
-            "links_generated": len(invites_sent)
-        })
+        "body": json.dumps(
+            {"message": "Log upload invites sent", "alert_reference": alert_ref, "links_generated": len(invites_sent)}
+        ),
     }

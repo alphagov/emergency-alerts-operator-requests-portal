@@ -30,9 +30,7 @@ def _temporary_env(env: dict):
 
 def load_lambda_module(rel_path: str, module_name: str, env: dict = None) -> ModuleType:
     full_path = REPO_ROOT / rel_path
-    with _temporary_env(env or {}), mock.patch(
-        "boto3.client", side_effect=lambda *args, **kwargs: mock.MagicMock()
-    ):
+    with _temporary_env(env or {}), mock.patch("boto3.client", side_effect=lambda *args, **kwargs: mock.MagicMock()):
         spec = importlib.util.spec_from_file_location(module_name, full_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)

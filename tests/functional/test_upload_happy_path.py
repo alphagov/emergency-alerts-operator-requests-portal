@@ -22,18 +22,16 @@ def test_log_upload_end_to_end(broadcast_id, mno_id, mno_portal_id, mno_email, m
     alert_reference = f"FUNCTIONAL-TEST-{uuid.uuid4().hex[:8].upper()}"
     logger.info("Step 1: invoking log-upload Lambda for broadcast_id '%s'", broadcast_id)
 
-    response = invoke_log_upload_lambda(
-        alert_reference=alert_reference, mno_id=mno_id, broadcast_id=broadcast_id
-    )
+    response = invoke_log_upload_lambda(alert_reference=alert_reference, mno_id=mno_id, broadcast_id=broadcast_id)
     assert response.get("statusCode") == 200, f"Lambda returned unexpected statusCode: {response}"
 
     body = response.get("body", {})
     assert body.get("links_generated") == 1, f"Expected 1 upload link to be generated, got: {body}"
 
     invite_record = get_invite_tracking_record(mno_label, broadcast_id)
-    assert invite_record is not None, (
-        f"No invite tracking record found for mno_label '{mno_label}' broadcast '{broadcast_id}'"
-    )
+    assert (
+        invite_record is not None
+    ), f"No invite tracking record found for mno_label '{mno_label}' broadcast '{broadcast_id}'"
 
     logger.info("Step 2: polling Notify for invite email to %s", mno_email)
     portal_host = config["portal_url"].removeprefix("https://")
@@ -73,12 +71,12 @@ def test_log_upload_end_to_end(broadcast_id, mno_id, mno_portal_id, mno_email, m
 
     logger.info("Step 5: confirming internal notify notification fired for this key")
     matches = wait_for_cloudwatch_logs(
-        config["log_download_lambda_name"],
+        config["upload_notifier_lambda_name"],
         filter_pattern=f'"Sent download notification for {broadcast_id}"',
     )
     assert matches, (
         f"No 'Sent download notification' log line found for broadcast {broadcast_id} in "
-        f"{config['log_download_lambda_name']} — internal notify may not have fired"
+        f"{config['upload_notifier_lambda_name']} — internal notify may not have fired"
     )
 
     logger.info("Step 6: attempting second upload to confirm single-use enforcement")

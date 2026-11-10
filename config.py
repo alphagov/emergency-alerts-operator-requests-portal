@@ -1,6 +1,5 @@
 import os
 
-
 config = {
     # Retry / timing knobs
     "verify_code_retry_times": 5,
@@ -40,7 +39,7 @@ def setup_config():
             "notify_api_key": os.environ["NOTIFY_SERVICE_API_KEY"],
             # The dummy MNO used in tests — must exist as a configured MNO in the environment.
             # mno_id is the name key passed in the Lambda event (e.g. "test_mno_001").
-            # portal_id is the resolved 6-character identifier stored in SSM and used in
+            # portal_id is the resolved 32-character identifier stored in SSM and used in
             # upload URLs, DynamoDB keys, and S3 paths.
             "test_mno": {
                 "mno_id": os.environ["TEST_MNO_ID"],
@@ -56,6 +55,6 @@ def setup_config():
                 "LOG_INVITE_TRACKING_TABLE",
                 "operator-request-portal-log-invites",
             ),
-            "log_download_lambda_name": f"mno-portal-{env}-lambda-log-download",
+            "upload_notifier_lambda_name": f"mno-portal-{env}-uploaded-logs-notifier",
         }
     )

@@ -19,7 +19,6 @@ UPLOAD_HANDLER_PATH = (
 )
 
 UPLOAD_HANDLER_ENV = {
-    "LOG_BUCKET_NAME": "unused",
     "UPLOAD_DOMAIN": "unused",
     "NOTIFY_LAMBDA_ARN": "unused",
     "NOTIFY_LOG_TEMPLATE_ID": "unused",

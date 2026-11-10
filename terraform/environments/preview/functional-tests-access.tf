@@ -50,7 +50,7 @@ data "aws_iam_policy_document" "functional_tests_access_permissions" {
     actions = ["logs:FilterLogEvents"]
     resources = [
       "arn:aws:logs:${local.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/mno-portal-preview-log-upload-handler:*",
-      "arn:aws:logs:${local.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/mno-portal-preview-lambda-log-download:*",
+      "arn:aws:logs:${local.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/mno-portal-preview-uploaded-logs-notifier:*",
     ]
   }
 

@@ -3,11 +3,6 @@ variable "environment" {
   type        = string
 }
 
-variable "log_bucket_name" {
-  description = "S3 bucket to hold uploaded logs"
-  type        = string
-}
-
 variable "upload_domain" {
   description = "The CloudFront/S3 domain used for upload URLs"
   type        = string
@@ -24,15 +19,9 @@ variable "notify_log_template_id" {
 }
 
 variable "upload_link_expiry_seconds" {
-  description = "Seconds until the upload link expires"
+  description = "Seconds after the broadcast start that the upload link remains valid"
   type        = number
-  default     = 604800
-}
-
-variable "dynamodb_region" {
-  description = "Region of the DynamoDB table"
-  type        = string
-  default     = "eu-west-2"
+  default     = 172800
 }
 
 variable "eas_preview_account_id" {
@@ -60,7 +49,7 @@ variable "mno_email_ssm_prefix" {
 }
 
 variable "mno_id_ssm_prefix" {
-  description = "SSM Parameter Store prefix for MNO 6-character portal identifiers"
+  description = "SSM Parameter Store prefix for MNO 32-character portal identifiers"
   type        = string
   default     = "/operator-portal/mno-ids"
 }

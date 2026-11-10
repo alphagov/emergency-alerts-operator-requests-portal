@@ -78,12 +78,11 @@
                       window.location.href = 'link-expired.html';
                     } else if (errType === 'already_used') {
                       window.location.href = 'max-limit.html';
+                    } else if (errType === 'invalid_request') {
+                      window.location.href = 'invalid-request.html';
                     } else {
                       window.location.href = 'error.html';
                     }
-                    break;
-                  case 405:
-                    window.location.href = 'method-not-allowed.html';
                     break;
                   default:
                     window.location.href = 'error.html';
