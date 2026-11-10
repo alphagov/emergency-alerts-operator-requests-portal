@@ -25,6 +25,15 @@ resource "aws_iam_role_policy" "lambda_policy" {
     Version = "2012-10-17",
     Statement = [
       {
+        Effect = "Allow",
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${var.environment}-lambda-log-download:*"
+      },
+      {
         Effect   = "Allow",
         Action   = ["dynamodb:GetItem"],
         Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.log_invite_tracking_table}"
@@ -49,9 +58,4 @@ resource "aws_iam_role_policy" "lambda_policy" {
       }
     ]
   })
-}
-
-resource "aws_iam_role_policy_attachment" "basic_execution" {
-  role       = aws_iam_role.lambda_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }

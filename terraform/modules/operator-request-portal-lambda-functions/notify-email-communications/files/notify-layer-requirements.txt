@@ -1,1 +1,1 @@
-notifications-python-client
+notifications-python-client==13.0.0

@@ -27,7 +27,7 @@ resource "aws_iam_policy" "notify_lambda_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ],
-        Resource = "arn:aws:logs:*:*:*",
+        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${var.environment}-NotifyServiceLambda:*",
         Effect   = "Allow"
       },
       {

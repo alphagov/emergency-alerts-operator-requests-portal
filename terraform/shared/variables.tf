@@ -1,14 +1,3 @@
-variable "environment" {
-  description = "Environment name"
-  type        = string
-}
-
-variable "project_name" {
-  description = "Project name for resource naming"
-  type        = string
-  default     = "operator-request-portal"
-}
-
 # Remote state configuration
 variable "infra_mgt_state_bucket" {
   description = "S3 bucket where infra-mgt stores its state"
@@ -26,19 +15,6 @@ variable "infra_mgt_state_region" {
   description = "Region where infra-mgt state bucket lives"
   type        = string
   default     = "eu-west-2"
-}
-
-# Application-specific configuration
-variable "upload_link_expiry_seconds" {
-  description = "Number of seconds upload links remain valid"
-  type        = number
-  default     = 604800 # 7 days
-}
-
-variable "tags" {
-  description = "Common tags to apply to all resources"
-  type        = map(string)
-  default     = {}
 }
 
 variable "notify_api_key_parameter_name" {

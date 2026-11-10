@@ -1,13 +1,9 @@
 module "shared" {
   source = "../../shared"
 
-  environment                = var.environment
-  project_name               = var.project_name
-  infra_mgt_state_bucket     = var.infra_mgt_state_bucket
-  infra_mgt_state_key        = var.infra_mgt_state_key
-  infra_mgt_state_region     = var.infra_mgt_state_region
-  upload_link_expiry_seconds = var.upload_link_expiry_seconds
-  tags                       = var.tags
+  infra_mgt_state_bucket = var.infra_mgt_state_bucket
+  infra_mgt_state_key    = var.infra_mgt_state_key
+  infra_mgt_state_region = var.infra_mgt_state_region
 
   notify_api_key_parameter_name = aws_ssm_parameter.notify_api_key.name
   notify_api_key_parameter_arn  = aws_ssm_parameter.notify_api_key.arn
@@ -22,7 +18,6 @@ locals {
 
   environment  = var.environment
   project_name = var.project_name
-  aws_region   = var.aws_region
 }
 
 # Notify email communications service
@@ -65,10 +60,9 @@ module "lambda_log_upload" {
 module "lambda_edge_log_upload" {
   source = "../../modules/operator-request-portal-lambda-functions/log-mgt-functions/lambda@edge-log-upload"
 
-  environment                    = local.environment
-  cloudfront_distribution_id     = module.operator_request_portal_static_site.cloudfront_distribution_id
-  log_upload_tracking_table_name = module.lambda_log_upload.log_upload_tracking_table_name
-  log_upload_tracking_table_arn  = module.lambda_log_upload.log_upload_tracking_table_arn
+  environment                   = local.environment
+  cloudfront_distribution_id    = module.operator_request_portal_static_site.cloudfront_distribution_id
+  log_upload_tracking_table_arn = module.lambda_log_upload.log_upload_tracking_table_arn
 
   providers = {
     aws.us_east_1 = aws.us_east_1

@@ -56,6 +56,19 @@ def _mask_email(email: str) -> str:
     return f"{masked_local}@{domain}"
 
 
+def _mask_portal_id(portal_id: str) -> str:
+    """Log-safe form of an MNO portal identifier: keeps a short prefix for tracing, masks the rest."""
+    if not portal_id or len(portal_id) <= 8:
+        return "***"
+    return f"{portal_id[:4]}***"
+
+
+def _mask_key(composite_key: str) -> str:
+    """Log-safe form of a '<portal_id>#<broadcast_id>' tracking key."""
+    portal_id, sep, broadcast_id = composite_key.partition("#")
+    return f"{_mask_portal_id(portal_id)}{sep}{broadcast_id}"
+
+
 def _sanitize_for_filename(value: str) -> str:
     cleaned = re.sub(r"[^A-Za-z0-9-]+", "-", value).strip("-")
     return cleaned.upper() or "UNKNOWN"
@@ -116,13 +129,13 @@ def register_upload_reference(
             },
             ConditionExpression="attribute_not_exists(RequestId)"
         )
-        logger.info(f"Registered upload reference {key} → {s3_location}")
+        logger.info(f"Registered upload reference {_mask_key(key)} → {s3_location}")
         return True
     except ddb.exceptions.ConditionalCheckFailedException:
-        logger.warning(f"Upload reference {key} already exists")
+        logger.warning(f"Upload reference {_mask_key(key)} already exists")
         return False
     except Exception as e:
-        logger.error(f"Error registering upload reference {key}: {e}")
+        logger.error(f"Error registering upload reference {_mask_key(key)}: {e}")
         return False
 
 
@@ -148,7 +161,8 @@ def send_invite(email: str, broadcast_id: str, mno_name: str, portal_id: str):
             Payload=json.dumps(payload).encode("utf-8")
         )
         logger.info(
-            f"Sent invite to {_mask_email(email)} for MNO {mno_name} ({portal_id}) broadcast {broadcast_id}"
+            f"Sent invite to {_mask_email(email)} for MNO {mno_name} ({_mask_portal_id(portal_id)}) "
+            f"broadcast {broadcast_id}"
         )
     except Exception as e:
         logger.error(f"Error sending invite to {_mask_email(email)}: {e}")
@@ -190,7 +204,10 @@ def lambda_handler(event, context):
         mno_label = _sanitize_for_filename(mno_id)
 
         if already_invited(mno_label, broadcast_id):
-            logger.info(f"Invite for MNO {mno_id} ({portal_id}) broadcast {broadcast_id} already sent, skipping")
+            logger.info(
+                f"Invite for MNO {mno_id} ({_mask_portal_id(portal_id)}) broadcast {broadcast_id} "
+                "already sent, skipping"
+            )
             continue
 
         emails = _get_mno_emails(mno_id)

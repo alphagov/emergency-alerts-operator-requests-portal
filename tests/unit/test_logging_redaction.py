@@ -1,6 +1,6 @@
 """
-Asserts sensitive fields (recipient emails) never appear verbatim in
-log output, only their masked form.
+Asserts sensitive fields (recipient emails, MNO portal identifiers) never
+appear verbatim in log output, only their masked form.
 """
 
 from unittest import mock
@@ -10,6 +10,10 @@ from tests.unit._lambda_loader import load_lambda_module
 UPLOAD_HANDLER_PATH = (
     "terraform/modules/operator-request-portal-lambda-functions/log-mgt-functions/"
     "lambda-log-upload/files/log-upload-handler.py"
+)
+EDGE_UPLOAD_PATH = (
+    "terraform/modules/operator-request-portal-lambda-functions/log-mgt-functions/"
+    "lambda@edge-log-upload/files/edge-log-upload.py"
 )
 DOWNLOAD_HANDLER_PATH = (
     "terraform/modules/operator-request-portal-lambda-functions/log-mgt-functions/"
@@ -32,6 +36,7 @@ DOWNLOAD_ENV = {
 }
 
 SENSITIVE_EMAIL = "mno-contact@example.gov.uk"
+PORTAL_ID = "A1B2C3D4E5F6G7H8J9K0L1M2N3P4Q5R6"
 
 
 def _log_text(caplog) -> str:
@@ -77,3 +82,51 @@ def test_mask_email_helper():
     )
     assert module._mask_email("a@b.gov.uk") == "a***@b.gov.uk"
     assert module._mask_email("not-an-email") == "***"
+
+
+def test_upload_edge_unknown_link_log_masks_portal_id(caplog):
+    module = load_lambda_module(EDGE_UPLOAD_PATH, f"edge_log_upload_{id(object())}", env={})
+    module.ddb.get_item.return_value = {}
+
+    with caplog.at_level("WARNING"):
+        item, err = module._validate_request(PORTAL_ID, "broadcast-1")
+
+    assert item is None
+    assert err is not None
+    log_text = _log_text(caplog)
+    assert PORTAL_ID not in log_text
+    assert "A1B2***" in log_text
+
+
+def test_upload_edge_confirmed_upload_log_masks_portal_id(caplog):
+    module = load_lambda_module(EDGE_UPLOAD_PATH, f"edge_log_upload_{id(object())}", env={})
+    module.ddb.update_item.return_value = {}
+    uri = "/received/logs/broadcast-1/CBC_EE_20250512-0900Z_broadcast-1.zip"
+    request = {"uri": uri, "headers": {"x-upload-token": [{"key": "X-Upload-Token", "value": PORTAL_ID}]}}
+
+    with caplog.at_level("INFO"):
+        module._handle_origin_response(request, {"status": "200"})
+
+    log_text = _log_text(caplog)
+    assert PORTAL_ID not in log_text
+    assert "A1B2***" in log_text
+
+
+def test_invite_registration_log_masks_portal_id(caplog):
+    module = load_lambda_module(UPLOAD_HANDLER_PATH, f"log_upload_handler_{id(object())}", env=UPLOAD_ENV)
+    module.ddb.put_item.return_value = {}
+
+    with caplog.at_level("INFO"):
+        assert module.register_upload_reference(PORTAL_ID, "broadcast-1", "/received/logs/x.zip", "ee")
+
+    log_text = _log_text(caplog)
+    assert PORTAL_ID not in log_text
+    assert "A1B2***#broadcast-1" in log_text
+
+
+def test_mask_portal_id_helper():
+    module = load_lambda_module(EDGE_UPLOAD_PATH, f"edge_log_upload_{id(object())}", env={})
+    assert module._mask_portal_id(PORTAL_ID) == "A1B2***"
+    assert module._mask_portal_id("SHORT") == "***"
+    assert module._mask_portal_id("") == "***"
+    assert module._mask_key(f"{PORTAL_ID}#broadcast-1") == "A1B2***#broadcast-1"

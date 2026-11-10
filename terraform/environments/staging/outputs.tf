@@ -39,6 +39,6 @@ output "dynamodb_tables" {
   description = "Names of all DynamoDB tables"
   value = {
     log_invite_tracking = module.lambda_log_upload.log_invite_tracking_table_name
-    log_upload_tracking = module.lambda_edge_log_upload.log_upload_tracking_table_name
+    log_upload_tracking = module.lambda_log_upload.log_upload_tracking_table_name
   }
 }

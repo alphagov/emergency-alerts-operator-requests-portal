@@ -6,7 +6,6 @@ from config import config
 PAGES = {
     "invalid-request.html": "Invalid Request",
     "link-expired.html": "Link Expired",
-    "link-invalid.html": "Link No Longer Valid",
     "max-limit.html": "Maximum Limit Reached",
     "method-not-allowed.html": "Method Not Allowed",
     "error.html": "Something Went Wrong",

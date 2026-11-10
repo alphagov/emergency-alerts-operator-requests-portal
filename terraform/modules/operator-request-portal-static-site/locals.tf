@@ -9,7 +9,6 @@ locals {
     "index.html"              = { title = "Welcome to the Operator Portal", content_file = "index.html" }
     "invalid-request.html"    = { title = "Invalid Request - Operator Portal", content_file = "invalid-request.html" }
     "link-expired.html"       = { title = "Link Expired - Operator Portal", content_file = "link-expired.html" }
-    "link-invalid.html"       = { title = "Link Invalid - Operator Portal", content_file = "link-invalid.html" }
     "max-limit.html"          = { title = "Maximum Limit Reached - Operator Portal", content_file = "max-limit.html" }
     "method-not-allowed.html" = { title = "Method Not Allowed - Operator Portal", content_file = "method-not-allowed.html" }
     "upload-logs.html"        = { title = "Upload Logs - Operator Portal", content_file = "upload-logs.html" }

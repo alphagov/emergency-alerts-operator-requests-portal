@@ -78,6 +78,10 @@
                       window.location.href = 'link-expired.html';
                     } else if (errType === 'already_used') {
                       window.location.href = 'max-limit.html';
+                    } else if (errType === 'invalid_request') {
+                      window.location.href = 'invalid-request.html';
+                    } else if (errType === 'method_not_allowed') {
+                      window.location.href = 'method-not-allowed.html';
                     } else {
                       window.location.href = 'error.html';
                     }
