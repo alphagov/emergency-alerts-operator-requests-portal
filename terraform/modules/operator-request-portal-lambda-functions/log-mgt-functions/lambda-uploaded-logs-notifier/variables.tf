@@ -32,3 +32,14 @@ variable "log_invite_tracking_table" {
   description = "Name of the DynamoDB table used to track log upload invites (for MNO name and alert time lookup)"
   type        = string
 }
+
+variable "log_upload_tracking_table" {
+  description = "Name of the DynamoDB table holding upload links, so a link can be released when an upload is rejected"
+  type        = string
+}
+
+variable "notify_rejected_template_id" {
+  description = "GOV.UK Notify template ID for the Alerts team email about a rejected upload. Empty skips the email."
+  type        = string
+  default     = ""
+}

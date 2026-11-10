@@ -19,9 +19,9 @@ variable "notify_log_template_id" {
 }
 
 variable "upload_link_expiry_seconds" {
-  description = "Seconds until the upload link expires"
+  description = "Seconds after the broadcast start that the upload link remains valid"
   type        = number
-  default     = 604800
+  default     = 172800
 }
 
 variable "eas_preview_account_id" {

@@ -17,7 +17,7 @@ EDGE_UPLOAD_PATH = (
 )
 DOWNLOAD_HANDLER_PATH = (
     "terraform/modules/operator-request-portal-lambda-functions/log-mgt-functions/"
-    "lambda-log-download/files/lambda-log-download.py"
+    "lambda-uploaded-logs-notifier/files/uploaded-logs-notifier.py"
 )
 UPLOAD_ENV = {
     "UPLOAD_DOMAIN": "upload.example.gov.uk",
@@ -32,6 +32,7 @@ DOWNLOAD_ENV = {
     "NOTIFY_LAMBDA_ARN": "arn:aws:lambda:eu-west-2:123456789012:function:notify",
     "NOTIFY_TEMPLATE_ID": "template-id",
     "LOG_INVITE_TRACKING_TABLE": "invite-tracking",
+    "LOG_UPLOAD_TRACKING_TABLE": "upload-tracking",
     "ALERTS_TEAM_EMAILS": "alerts@example.gov.uk",
 }
 
@@ -55,7 +56,7 @@ def test_upload_invite_send_masks_recipient_email(caplog):
 
 
 def test_download_link_send_masks_recipient_email(caplog):
-    module = load_lambda_module(DOWNLOAD_HANDLER_PATH, f"lambda_log_download_{id(object())}", env=DOWNLOAD_ENV)
+    module = load_lambda_module(DOWNLOAD_HANDLER_PATH, f"uploaded_logs_notifier_{id(object())}", env=DOWNLOAD_ENV)
     module.recipients = [SENSITIVE_EMAIL]
     module.ddb.get_item.return_value = {"Item": {"MnoName": {"S": "Test MNO"}, "AlertTime": {"S": ""}}}
 
@@ -108,7 +109,9 @@ def test_invite_registration_log_masks_portal_id(caplog):
     module.ddb.put_item.return_value = {}
 
     with caplog.at_level("INFO"):
-        assert module.register_upload_reference(PORTAL_ID, "broadcast-1", "/received/logs/x.zip", "ee")
+        assert module.register_upload_reference(
+            PORTAL_ID, "broadcast-1", "/received/logs/x.zip", "ee", "2025-05-12T09:00:00Z"
+        )
 
     log_text = _log_text(caplog)
     assert PORTAL_ID not in log_text

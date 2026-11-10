@@ -82,13 +82,13 @@ def _rejected_content_case(mno_portal_id, broadcast_id, content: bytes):
 
     # Wait for the positive rejection log first, so the negative check below isn't vacuous
     rejected = wait_for_cloudwatch_logs(
-        config["log_download_lambda_name"],
+        config["upload_notifier_lambda_name"],
         filter_pattern=f'"Rejected upload with non-ZIP content for broadcast_id={broadcast_id}"',
     )
-    assert rejected, "Expected the download Lambda to log a non-ZIP rejection"
+    assert rejected, "Expected the uploaded logs notifier to log a non-ZIP rejection"
 
     matches = filter_cloudwatch_logs(
-        config["log_download_lambda_name"],
+        config["upload_notifier_lambda_name"],
         filter_pattern=f'"Sent download notification for {broadcast_id}"',
     )
     assert not matches, "Internal notify should NOT fire for non-ZIP content"

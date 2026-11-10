@@ -22,11 +22,13 @@ def invoke_log_upload_lambda(alert_reference: str, mno_id: str, broadcast_id: st
     """
     client = boto3.client("lambda", region_name=config["aws_region"])
 
+    # Upload links expire a fixed time after the broadcast start, so tests use a broadcast that has just started
+    broadcast_start = datetime.now(timezone.utc).replace(microsecond=0)
     payload = {
         "alert_reference": alert_reference,
         "environment": config["env"],
-        "broadcast_start": "2025-01-01T09:00:00Z",
-        "broadcast_end": "2025-01-01T09:15:00Z",
+        "broadcast_start": broadcast_start.isoformat().replace("+00:00", "Z"),
+        "broadcast_end": (broadcast_start + timedelta(minutes=15)).isoformat().replace("+00:00", "Z"),
         "mnos": [
             {
                 "mno_id": mno_id,

@@ -7,7 +7,6 @@ PAGES = {
     "invalid-request.html": "Invalid Request",
     "link-expired.html": "Link Expired",
     "max-limit.html": "Maximum Limit Reached",
-    "method-not-allowed.html": "Method Not Allowed",
     "error.html": "Something Went Wrong",
 }
 

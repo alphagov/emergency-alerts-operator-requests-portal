@@ -35,7 +35,7 @@ variable "gds_aws_profile" {
 }
 
 variable "upload_link_expiry_seconds" {
-  description = "Number of seconds upload links remain valid"
+  description = "Seconds after the broadcast start that MNO upload links remain valid"
   type        = number
 }
 

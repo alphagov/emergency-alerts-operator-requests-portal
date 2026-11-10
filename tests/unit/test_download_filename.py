@@ -14,7 +14,7 @@ UPLOAD_HANDLER_PATH = (
 )
 DOWNLOAD_HANDLER_PATH = (
     "terraform/modules/operator-request-portal-lambda-functions/log-mgt-functions/"
-    "lambda-log-download/files/lambda-log-download.py"
+    "lambda-uploaded-logs-notifier/files/uploaded-logs-notifier.py"
 )
 
 UPLOAD_ENV = {
@@ -30,6 +30,7 @@ DOWNLOAD_ENV = {
     "NOTIFY_LAMBDA_ARN": "arn:aws:lambda:eu-west-2:123456789012:function:notify",
     "NOTIFY_TEMPLATE_ID": "template-id",
     "LOG_INVITE_TRACKING_TABLE": "invite-tracking",
+    "LOG_UPLOAD_TRACKING_TABLE": "upload-tracking",
     "ALERTS_TEAM_EMAILS": "alerts@example.gov.uk",
 }
 
@@ -44,7 +45,7 @@ def _load_upload():
 
 
 def _load_download():
-    return load_lambda_module(DOWNLOAD_HANDLER_PATH, f"lambda_log_download_{id(object())}", env=DOWNLOAD_ENV)
+    return load_lambda_module(DOWNLOAD_HANDLER_PATH, f"uploaded_logs_notifier_{id(object())}", env=DOWNLOAD_ENV)
 
 
 def test_sanitize_and_timestamp_helpers():
@@ -87,6 +88,9 @@ def test_upload_writes_self_descriptive_s3_key_without_portal_id_and_invite_reco
     invite_item = invite_calls[0].kwargs["Item"]
     assert invite_item["AlertRef"] == {"S": f"{MNO_LABEL}#{BROADCAST_ID}"}
     assert invite_item["MnoName"] == {"S": "three"}
+    assert invite_item["UploadRequestId"] == {"S": f"{PORTAL_ID}#{BROADCAST_ID}"}
+
+    assert upload_item["ExpiresAt"] == {"S": "2025-05-14T09:00:00+00:00"}
 
 
 SELF_DESCRIPTIVE_KEY = f"received/logs/{BROADCAST_ID}/CBC_{MNO_LABEL}_20250512-0900Z_{BROADCAST_ID}.zip"

@@ -1,13 +1,13 @@
 data "archive_file" "notify_on_upload_zip" {
   type        = "zip"
-  output_path = format("%s/.terraform-assets/lambda_zip_file_notify_on_upload.zip", path.root)
-  source_file = format("%s/files/lambda-log-download.py", path.module)
+  output_path = format("%s/.terraform-assets/lambda_zip_file_uploaded_logs_notifier.zip", path.root)
+  source_file = format("%s/files/uploaded-logs-notifier.py", path.module)
 }
 
 resource "aws_lambda_function" "notify_on_upload" {
-  function_name    = "${var.environment}-lambda-log-download"
+  function_name    = "${var.environment}-uploaded-logs-notifier"
   filename         = data.archive_file.notify_on_upload_zip.output_path
-  handler          = "lambda-log-download.lambda_handler"
+  handler          = "uploaded-logs-notifier.lambda_handler"
   runtime          = "python3.13"
   role             = aws_iam_role.lambda_role.arn
   source_code_hash = data.archive_file.notify_on_upload_zip.output_base64sha256
@@ -15,11 +15,13 @@ resource "aws_lambda_function" "notify_on_upload" {
 
   environment {
     variables = {
-      GDS_AWS_PROFILE           = var.gds_aws_profile
-      NOTIFY_LAMBDA_ARN         = var.notify_lambda_arn
-      NOTIFY_TEMPLATE_ID        = var.notify_template_id
-      LOG_INVITE_TRACKING_TABLE = var.log_invite_tracking_table
-      ALERTS_TEAM_EMAILS        = var.alerts_team_emails
+      GDS_AWS_PROFILE             = var.gds_aws_profile
+      NOTIFY_LAMBDA_ARN           = var.notify_lambda_arn
+      NOTIFY_TEMPLATE_ID          = var.notify_template_id
+      LOG_INVITE_TRACKING_TABLE   = var.log_invite_tracking_table
+      LOG_UPLOAD_TRACKING_TABLE   = var.log_upload_tracking_table
+      ALERTS_TEAM_EMAILS          = var.alerts_team_emails
+      NOTIFY_REJECTED_TEMPLATE_ID = var.notify_rejected_template_id
     }
   }
 }

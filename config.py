@@ -55,6 +55,6 @@ def setup_config():
                 "LOG_INVITE_TRACKING_TABLE",
                 "operator-request-portal-log-invites",
             ),
-            "log_download_lambda_name": f"mno-portal-{env}-lambda-log-download",
+            "upload_notifier_lambda_name": f"mno-portal-{env}-uploaded-logs-notifier",
         }
     )

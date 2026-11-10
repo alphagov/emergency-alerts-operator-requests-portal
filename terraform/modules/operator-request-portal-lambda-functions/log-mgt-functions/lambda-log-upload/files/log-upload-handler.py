@@ -14,7 +14,8 @@ NOTIFY_LAMBDA_ARN = os.environ["NOTIFY_LAMBDA_ARN"]
 NOTIFY_TEMPLATE_ID = os.environ["NOTIFY_LOG_TEMPLATE_ID"]
 LOG_INVITE_TRACKING_TABLE = os.environ["LOG_INVITE_TRACKING_TABLE"]
 LOG_UPLOAD_TRACKING_TABLE = os.environ["LOG_UPLOAD_TRACKING_TABLE"]
-EXPIRY_SECONDS = int(os.environ.get("UPLOAD_LINK_EXPIRY_SECONDS", "604800"))
+# Upload links expire this long after the broadcast start (MNOs upload within 2 days of the broadcast)
+EXPIRY_SECONDS = int(os.environ.get("UPLOAD_LINK_EXPIRY_SECONDS", "172800"))
 MNO_EMAIL_SSM_PREFIX = os.environ.get("MNO_EMAIL_SSM_PREFIX", "/operator-portal/mno-emails")
 MNO_ID_SSM_PREFIX = os.environ.get("MNO_ID_SSM_PREFIX", "/operator-portal/mno-ids")
 
@@ -94,8 +95,11 @@ def already_invited(mno_id: str, broadcast_id: str) -> bool:
     return "Item" in resp
 
 
-def mark_invited(mno_label: str, broadcast_id: str, mno_name: str, alert_time: str):
-
+def mark_invited(mno_label: str, broadcast_id: str, mno_name: str, alert_time: str, upload_request_id: str):
+    """
+    upload_request_id is the key of the upload link record, kept so the link can be released
+    for a re-upload if the uploaded file is rejected.
+    """
     ddb.put_item(
         TableName=LOG_INVITE_TRACKING_TABLE,
         Item={
@@ -103,13 +107,28 @@ def mark_invited(mno_label: str, broadcast_id: str, mno_name: str, alert_time: s
             "InvitedAt": {"S": datetime.now(timezone.utc).isoformat()},
             "MnoName": {"S": mno_name},
             "AlertTime": {"S": alert_time},
+            "UploadRequestId": {"S": upload_request_id},
         },
     )
 
 
-def register_upload_reference(mno_id: str, broadcast_id: str, s3_location: str, mno_name: str) -> bool:
+def _upload_link_expiry(broadcast_start: str) -> datetime:
+    """Links expire EXPIRY_SECONDS after the broadcast start, or after now if the start time is missing."""
+    try:
+        start = datetime.fromisoformat(broadcast_start.replace("Z", "+00:00"))
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+    except (AttributeError, ValueError):
+        logger.warning(f"Invalid broadcast_start '{broadcast_start}', timing upload link expiry from now")
+        start = datetime.now(timezone.utc)
+    return start + timedelta(seconds=EXPIRY_SECONDS)
+
+
+def register_upload_reference(
+    mno_id: str, broadcast_id: str, s3_location: str, mno_name: str, broadcast_start: str
+) -> bool:
     key = _invite_key(mno_id, broadcast_id)
-    expires_at = (datetime.now(timezone.utc) + timedelta(seconds=EXPIRY_SECONDS)).isoformat()
+    expires_at = _upload_link_expiry(broadcast_start).isoformat()
     try:
         ddb.put_item(
             TableName=LOG_UPLOAD_TRACKING_TABLE,
@@ -212,9 +231,9 @@ def lambda_handler(event, context):
         broadcast_start = event.get("broadcast_start", "")
         filename = f"CBC_{mno_label}_{_format_timestamp_for_filename(broadcast_start)}_{broadcast_id}.zip"
         s3_location = f"/received/logs/{broadcast_id}/{filename}"
-        register_upload_reference(portal_id, broadcast_id, s3_location, mno_id)
+        register_upload_reference(portal_id, broadcast_id, s3_location, mno_id, broadcast_start)
 
-        mark_invited(mno_label, broadcast_id, mno_id, broadcast_start)
+        mark_invited(mno_label, broadcast_id, mno_id, broadcast_start, _invite_key(portal_id, broadcast_id))
 
         for email in emails:
             send_invite(email, broadcast_id, mno_id, portal_id)

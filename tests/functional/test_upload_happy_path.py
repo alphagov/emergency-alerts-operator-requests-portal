@@ -71,12 +71,12 @@ def test_log_upload_end_to_end(broadcast_id, mno_id, mno_portal_id, mno_email, m
 
     logger.info("Step 5: confirming internal notify notification fired for this key")
     matches = wait_for_cloudwatch_logs(
-        config["log_download_lambda_name"],
+        config["upload_notifier_lambda_name"],
         filter_pattern=f'"Sent download notification for {broadcast_id}"',
     )
     assert matches, (
         f"No 'Sent download notification' log line found for broadcast {broadcast_id} in "
-        f"{config['log_download_lambda_name']} — internal notify may not have fired"
+        f"{config['upload_notifier_lambda_name']} — internal notify may not have fired"
     )
 
     logger.info("Step 6: attempting second upload to confirm single-use enforcement")

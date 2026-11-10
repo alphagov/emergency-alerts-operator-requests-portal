@@ -13,6 +13,8 @@ GDS_AWS_PROFILE = os.environ["GDS_AWS_PROFILE"]
 NOTIFY_LAMBDA_ARN = os.environ["NOTIFY_LAMBDA_ARN"]
 NOTIFY_TEMPLATE_ID = os.environ["NOTIFY_TEMPLATE_ID"]
 LOG_INVITE_TRACKING_TABLE = os.environ["LOG_INVITE_TRACKING_TABLE"]
+LOG_UPLOAD_TRACKING_TABLE = os.environ["LOG_UPLOAD_TRACKING_TABLE"]
+NOTIFY_REJECTED_TEMPLATE_ID = os.environ.get("NOTIFY_REJECTED_TEMPLATE_ID", "")
 
 raw_list = os.environ["ALERTS_TEAM_EMAILS"]
 recipients = [email.strip() for email in raw_list.split(",") if email.strip()]
@@ -68,9 +70,16 @@ def _mask_email(email: str) -> str:
     return f"{masked_local}@{domain}"
 
 
+def _mask_key(upload_request_id: str) -> str:
+    """Log-safe form of a '<portal_id>#<broadcast_id>' upload link key."""
+    portal_id, sep, broadcast_id = upload_request_id.partition("#")
+    masked = f"{portal_id[:4]}***" if len(portal_id) > 8 else "***"
+    return f"{masked}{sep}{broadcast_id}"
+
+
 def _get_upload_record(mno_label: str, broadcast_id: str) -> dict:
     """
-    Fetch MnoName and AlertTime from the invite tracking record.
+    Fetch MnoName, AlertTime and the upload link key from the invite tracking record.
     """
     key = f"{mno_label}#{broadcast_id}"
     try:
@@ -78,10 +87,11 @@ def _get_upload_record(mno_label: str, broadcast_id: str) -> dict:
         item = resp.get("Item", {})
         mno_name = item.get("MnoName", {}).get("S") or mno_label
         alert_time = item.get("AlertTime", {}).get("S") or ""
-        return {"mno_name": mno_name, "alert_time": alert_time}
+        upload_request_id = item.get("UploadRequestId", {}).get("S") or ""
+        return {"mno_name": mno_name, "alert_time": alert_time, "upload_request_id": upload_request_id}
     except Exception as e:
         logger.warning("Could not look up invite record for %s: %s", key, e)
-        return {"mno_name": mno_label, "alert_time": ""}
+        return {"mno_name": mno_label, "alert_time": "", "upload_request_id": ""}
 
 
 def _format_alert_time(iso_str: str) -> str:
@@ -119,6 +129,56 @@ def send_notification(broadcast_id: str, mno_label: str, bucket: str, key: str):
         logger.info("Sent download notification for %s/%s to %s", broadcast_id, mno_name, _mask_email(email))
 
 
+def _release_upload_link(upload_request_id: str) -> bool:
+    """Mark the upload link unused again so the MNO can replace a rejected file."""
+    try:
+        ddb.update_item(
+            TableName=LOG_UPLOAD_TRACKING_TABLE,
+            Key={"RequestId": {"S": upload_request_id}},
+            UpdateExpression="SET #u = :false REMOVE UsedAt",
+            ConditionExpression="attribute_exists(RequestId)",
+            ExpressionAttributeNames={"#u": "Used"},
+            ExpressionAttributeValues={":false": {"BOOL": False}},
+        )
+        logger.info("Released upload link %s for a re-upload", _mask_key(upload_request_id))
+        return True
+    except Exception as e:
+        logger.error("Could not release upload link %s: %s", _mask_key(upload_request_id), e)
+        return False
+
+
+def handle_rejected_upload(broadcast_id: str, mno_label: str):
+    """Free the MNO's upload link and tell the Alerts team a file was rejected."""
+    record = _get_upload_record(mno_label, broadcast_id)
+    if record["upload_request_id"]:
+        _release_upload_link(record["upload_request_id"])
+    else:
+        logger.warning(
+            "No upload link key on the invite for broadcast_id=%s, mno=%s; release the link manually",
+            broadcast_id,
+            mno_label,
+        )
+
+    if not NOTIFY_REJECTED_TEMPLATE_ID:
+        logger.warning("NOTIFY_REJECTED_TEMPLATE_ID not set; Alerts team not emailed about the rejected upload")
+        return
+
+    for email in recipients:
+        payload = {
+            "email_address": email,
+            "template_id": NOTIFY_REJECTED_TEMPLATE_ID,
+            "personalisation": {
+                "broadcastId": broadcast_id,
+                "MNO": record["mno_name"],
+                "alertTime": _format_alert_time(record["alert_time"]),
+            },
+        }
+        lambda_cli.invoke(
+            FunctionName=NOTIFY_LAMBDA_ARN, InvocationType="Event", Payload=json.dumps(payload).encode("utf-8")
+        )
+        logger.info("Sent rejected upload notification for %s/%s to %s", broadcast_id, mno_label, _mask_email(email))
+
+
 def lambda_handler(event, context):
     """
     Triggered by S3 PutObject on received/logs/... .zip.
@@ -136,6 +196,7 @@ def lambda_handler(event, context):
 
         if not _is_zip_content(bucket, key):
             logger.warning("Rejected upload with non-ZIP content for broadcast_id=%s, mno=%s", broadcast_id, mno_label)
+            handle_rejected_upload(broadcast_id, mno_label)
             continue
 
         logger.info("New logs for broadcast_id=%s, mno=%s", broadcast_id, mno_label)

@@ -66,8 +66,8 @@ def test_invite_for_unknown_mno_does_not_crash(broadcast_id, mno_label):
     ), "No invite tracking record should be written for an unresolvable MNO"
 
 
-def test_invite_link_expiry_window(broadcast_id, mno_id, mno_portal_id):
-    "ExpiresAt matches UPLOAD_LINK_EXPIRY_SECONDS (default 7 days) from now."
+def test_invite_link_expiry_window(broadcast_id, mno_id, mno_portal_id, mno_label):
+    "ExpiresAt is UPLOAD_LINK_EXPIRY_SECONDS (2 days) after the broadcast start."
     invoke_log_upload_lambda(
         alert_reference=f"FUNCTIONAL-TEST-{uuid.uuid4().hex[:8].upper()}",
         mno_id=mno_id,
@@ -77,12 +77,11 @@ def test_invite_link_expiry_window(broadcast_id, mno_id, mno_portal_id):
     record = get_upload_tracking_record(mno_portal_id, broadcast_id)
     assert record is not None
 
+    invite_record = get_invite_tracking_record(mno_label, broadcast_id)
+    broadcast_start = datetime.fromisoformat(invite_record["AlertTime"]["S"].replace("Z", "+00:00"))
     expires_at = datetime.fromisoformat(record["ExpiresAt"]["S"])
-    created_at = datetime.fromisoformat(record["CreatedAt"]["S"])
-    delta = expires_at - created_at
-    assert (
-        timedelta(days=6, hours=23) < delta < timedelta(days=7, hours=1)
-    ), f"Expected ~7 day expiry window, got {delta}"
+    delta = expires_at - broadcast_start
+    assert delta == timedelta(days=2), f"Expected expiry 2 days after the broadcast start, got {delta}"
 
 
 def test_invite_pii_masked_in_logs(broadcast_id, mno_id, mno_email):

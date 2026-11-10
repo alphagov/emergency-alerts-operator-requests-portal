@@ -29,9 +29,9 @@ module "notify_email_communications" {
   environment              = local.environment
 }
 
-# Log download Lambda
-module "lambda_log_download" {
-  source = "../../modules/operator-request-portal-lambda-functions/log-mgt-functions/lambda-log-download"
+# Notifies the Alerts team when an MNO's uploaded logs arrive
+module "lambda_uploaded_logs_notifier" {
+  source = "../../modules/operator-request-portal-lambda-functions/log-mgt-functions/lambda-uploaded-logs-notifier"
 
   environment = local.environment
   # CloudFront's upload cache behaviors target the static-site bucket as their origin
@@ -44,6 +44,16 @@ module "lambda_log_download" {
   notify_template_id        = local.notify_templates.log_download
   alerts_team_emails        = "alec.ashmore@digital.cabinet-office.gov.uk"
   log_invite_tracking_table = module.lambda_log_upload.log_invite_tracking_table_name
+
+  log_upload_tracking_table   = module.lambda_log_upload.log_upload_tracking_table_name
+  notify_rejected_template_id = try(local.notify_templates.log_upload_rejected, "")
+}
+
+# Keeps the S3 bucket notification as an in-place update during the rename. Replacing it could
+# briefly remove the bucket's only notification configuration.
+moved {
+  from = module.lambda_log_download
+  to   = module.lambda_uploaded_logs_notifier
 }
 
 # Log upload Lambda

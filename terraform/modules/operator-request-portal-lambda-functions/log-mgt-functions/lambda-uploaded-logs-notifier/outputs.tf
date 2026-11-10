@@ -1,5 +1,5 @@
 output "notify_on_upload_lambda_arn" {
-  description = "ARN of the S3-triggered notify-on-upload Lambda"
+  description = "ARN of the S3-triggered Lambda that notifies the Alerts team of uploaded logs"
   value       = aws_lambda_function.notify_on_upload.arn
 }
 
