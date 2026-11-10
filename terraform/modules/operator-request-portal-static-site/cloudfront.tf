@@ -142,28 +142,6 @@ resource "aws_cloudfront_distribution" "cdn" {
     }
   }
 
-  # Behavior for downloads (no caching)
-  ordered_cache_behavior {
-    path_pattern           = "download/*"
-    target_origin_id       = "S3-Endpoint"
-    viewer_protocol_policy = "https-only"
-
-    allowed_methods = ["GET", "HEAD"]
-    cached_methods  = ["GET", "HEAD"]
-
-    compress        = true
-    cache_policy_id = data.aws_cloudfront_cache_policy.caching_disabled.id
-
-    dynamic "lambda_function_association" {
-      for_each = var.lambda_log_download_arn != "" ? [1] : []
-      content {
-        event_type   = "viewer-request"
-        lambda_arn   = var.lambda_log_download_arn
-        include_body = false
-      }
-    }
-  }
-
   # Behavior for *.html: using S3-Endpoint with caching enabled.
   ordered_cache_behavior {
     path_pattern           = "*.html"

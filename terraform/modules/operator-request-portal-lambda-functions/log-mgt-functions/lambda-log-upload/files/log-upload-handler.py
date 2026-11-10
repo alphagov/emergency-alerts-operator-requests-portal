@@ -8,7 +8,6 @@ import boto3
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-LOG_BUCKET = os.environ["LOG_BUCKET_NAME"]
 UPLOAD_DOMAIN = os.environ["UPLOAD_DOMAIN"]
 NOTIFY_LAMBDA_ARN = os.environ["NOTIFY_LAMBDA_ARN"]
 NOTIFY_TEMPLATE_ID = os.environ["NOTIFY_LOG_TEMPLATE_ID"]
@@ -127,15 +126,6 @@ def register_upload_reference(
         return False
 
 
-def prepare_folder(broadcast_id: str):
-    try:
-        s3 = boto3.client("s3")
-        s3.put_object(Bucket=LOG_BUCKET, Key=f"received/logs/{broadcast_id}/")
-        logger.info(f"Created S3 prefix: received/logs/{broadcast_id}/")
-    except Exception as e:
-        logger.error(f"Error creating S3 prefix for broadcast {broadcast_id}: {e}")
-
-
 def send_invite(email: str, broadcast_id: str, mno_name: str, portal_id: str):
     upload_site = f"https://{UPLOAD_DOMAIN}/upload-logs.html?broadcast_id={broadcast_id}"
     portal_upload_help = f"https://{UPLOAD_DOMAIN}/automate-upload.html"
@@ -211,7 +201,6 @@ def lambda_handler(event, context):
         broadcast_start = event.get("broadcast_start", "")
         filename = f"CBC_{mno_label}_{_format_timestamp_for_filename(broadcast_start)}_{broadcast_id}.zip"
         s3_location = f"/received/logs/{broadcast_id}/{filename}"
-        prepare_folder(broadcast_id)
         register_upload_reference(portal_id, broadcast_id, s3_location, mno_id)
 
         mark_invited(mno_label, broadcast_id, mno_id, broadcast_start)

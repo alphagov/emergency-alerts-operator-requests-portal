@@ -21,7 +21,6 @@ EDGE_DOWNLOAD_PATH = (
 )
 
 UPLOAD_ENV = {
-    "LOG_BUCKET_NAME": "log-bucket",
     "UPLOAD_DOMAIN": "upload.example.gov.uk",
     "NOTIFY_LAMBDA_ARN": "arn:aws:lambda:eu-west-2:123456789012:function:notify",
     "NOTIFY_LOG_TEMPLATE_ID": "template-id",

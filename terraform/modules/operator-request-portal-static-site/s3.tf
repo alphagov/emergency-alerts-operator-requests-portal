@@ -31,7 +31,7 @@ resource "aws_s3_bucket_policy" "static_site_policy" {
 }
 
 resource "aws_s3_object" "html_files" {
-  for_each     = local.resolved_html_files_map
+  for_each     = local.html_files_map
   bucket       = aws_s3_bucket.static_site.bucket
   key          = each.key
   content      = each.value

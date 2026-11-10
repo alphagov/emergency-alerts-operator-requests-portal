@@ -1,6 +1,6 @@
 # emergency-alerts-operator-requests-portal
 
-Repository containing Terraform infrastructure code for the Emergency Alerts Operator Request Portal - a secure platform for Mobile Network Operators (MNOs) to manage certificate requests and log uploads.
+Repository containing Terraform infrastructure code for the Emergency Alerts Operator Request Portal - a secure platform for Mobile Network Operators (MNOs) to upload Cell Broadcast Centre (CBC) logs.
 
 ## Links
 
@@ -12,11 +12,8 @@ Repository containing Terraform infrastructure code for the Emergency Alerts Ope
 
 The Operator Request Portal provides Mobile Network Operators with:
 
-- **Certificate Signing Request (CSR) uploads** for secure authentication
 - **CBC (Cell Broadcast) log uploads** for compliance and auditing
-- **Automated certificate generation** via AWS Private CA
 - **Email notifications** via GOV.UK Notify
-- **Secure file downloads** with time-limited access
 
 ### Architecture
 
@@ -24,8 +21,8 @@ The portal uses a serverless architecture with:
 
 - **CloudFront** distribution for global edge delivery
 - **Lambda@Edge** functions for authentication and authorization
-- **S3 buckets** for CSR, log, and static site storage
-- **Lambda functions** for certificate generation and notifications
+- **S3 bucket** for the static site and uploaded logs
+- **Lambda functions** for upload invites and notifications
 - **DynamoDB** tables for metadata and tracking
 - **Route53** DNS management
 

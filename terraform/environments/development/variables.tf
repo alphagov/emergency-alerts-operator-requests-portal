@@ -39,12 +39,6 @@ variable "upload_link_expiry_seconds" {
   type        = number
 }
 
-variable "html_files_map" {
-  description = "Map of HTML files to upload to static site"
-  type        = map(string)
-  default     = {}
-}
-
 variable "tags" {
   description = "Common tags to apply to all resources"
   type        = map(string)

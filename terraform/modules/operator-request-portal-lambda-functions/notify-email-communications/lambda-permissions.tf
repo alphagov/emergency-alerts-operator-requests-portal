@@ -1,8 +1,7 @@
 resource "aws_lambda_permission" "lambda_invoke_permission" {
   for_each = toset([
     "${var.environment}-log-upload-handler",
-    "${var.environment}-notify-on-upload",
-    "${var.environment}-certificate-generation-lambda"
+    "${var.environment}-notify-on-upload"
   ])
 
   statement_id  = "AllowInvokeFrom-${each.key}"

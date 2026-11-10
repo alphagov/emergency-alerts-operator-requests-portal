@@ -38,16 +38,6 @@ resource "aws_iam_role_policy" "log_upload_policy" {
       {
         Effect = "Allow"
         Action = [
-          "s3:PutObject"
-        ]
-        Resource = [
-          "arn:aws:s3:::${var.log_bucket_name}/received/logs/*"
-        ]
-      },
-
-      {
-        Effect = "Allow"
-        Action = [
           "dynamodb:GetItem",
           "dynamodb:UpdateItem",
           "dynamodb:PutItem"
