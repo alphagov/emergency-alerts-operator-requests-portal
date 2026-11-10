@@ -86,7 +86,7 @@ resource "aws_lambda_permission" "allow_eas_api_invoke" {
   statement_id  = "AllowEASAPIInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.log_upload.function_name
-  principal     = local.eas_invoking_account_ids[var.environment]
+  principal = "arn:aws:iam::${local.eas_invoking_account_ids[var.environment]}:root"
 }
 
 

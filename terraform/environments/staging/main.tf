@@ -23,8 +23,6 @@ locals {
   environment  = var.environment
   project_name = var.project_name
   aws_region   = var.aws_region
-
-  download_tracking_table = "${var.project_name}-download-tracking"
 }
 
 # Notify email communications service
@@ -61,21 +59,6 @@ module "lambda_log_upload" {
   notify_lambda_arn          = module.notify_email_communications.notify_lambda_function_arn
   notify_log_template_id     = local.notify_templates.log_upload_invite
   upload_link_expiry_seconds = var.upload_link_expiry_seconds
-}
-
-# Lambda@Edge for log download
-module "lambda_edge_log_download" {
-  source = "../../modules/operator-request-portal-lambda-functions/log-mgt-functions/lambda@edge-log-download"
-
-  environment                 = local.environment
-  download_tracking_table     = local.download_tracking_table
-  dynamodb_region             = local.aws_region
-  cloudfront_distribution_arn = module.operator_request_portal_static_site.cloudfront_distribution_arn
-  cloudfront_distribution_id  = module.operator_request_portal_static_site.cloudfront_distribution_id
-
-  providers = {
-    aws.us_east_1 = aws.us_east_1
-  }
 }
 
 # Lambda@Edge for log upload
