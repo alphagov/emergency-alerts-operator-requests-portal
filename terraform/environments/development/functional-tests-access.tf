@@ -57,14 +57,14 @@ data "aws_iam_policy_document" "functional_tests_access_permissions" {
   statement {
     effect    = "Allow"
     actions   = ["s3:ListBucket"]
-    resources = ["arn:aws:s3:::${module.operator_request_portal_static_site.s3_bucket_name}"]
+    resources = ["arn:aws:s3:::${module.operator_request_portal_static_site.logs_bucket_name}"]
   }
 
   statement {
     effect  = "Allow"
     actions = ["s3:GetObject", "s3:DeleteObject"]
     resources = [
-      "arn:aws:s3:::${module.operator_request_portal_static_site.s3_bucket_name}/received/logs/*",
+      "arn:aws:s3:::${module.operator_request_portal_static_site.logs_bucket_name}/received/logs/*",
     ]
   }
 }

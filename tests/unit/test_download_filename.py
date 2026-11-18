@@ -92,6 +92,10 @@ def test_upload_writes_self_descriptive_s3_key_without_portal_id_and_invite_reco
 
     assert upload_item["ExpiresAt"] == {"S": "2025-05-14T09:00:00+00:00"}
 
+    # Records are deleted 365 days after the link expires
+    assert upload_item["DeleteAt"] == {"N": "1778749200"}
+    assert invite_item["DeleteAt"] == {"N": "1778749200"}
+
 
 SELF_DESCRIPTIVE_KEY = f"received/logs/{BROADCAST_ID}/CBC_{MNO_LABEL}_20250512-0900Z_{BROADCAST_ID}.zip"
 

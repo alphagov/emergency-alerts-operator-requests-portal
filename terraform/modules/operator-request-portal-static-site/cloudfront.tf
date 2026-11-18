@@ -31,7 +31,9 @@ resource "aws_cloudfront_distribution" "cdn" {
   default_root_object = "index.html"
   is_ipv6_enabled     = false
 
-  # Origin 1: S3-Endpoint
+  web_acl_id = aws_wafv2_web_acl.portal.arn
+
+  # Site pages and assets. CloudFront can only read from this bucket.
   origin {
     domain_name = aws_s3_bucket.static_site.bucket_regional_domain_name
     origin_id   = "S3-Endpoint"
@@ -39,82 +41,19 @@ resource "aws_cloudfront_distribution" "cdn" {
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
   }
 
-  # Origin 2: S3-Web-Endpoint
+  # Uploaded logs. CloudFront can only write to this bucket, and only through /log-upload.
   origin {
-    domain_name = format("%s.s3-website.%s.amazonaws.com", aws_s3_bucket.static_site.bucket, data.aws_region.current.id)
-    origin_id   = "S3-Web-Endpoint"
+    domain_name = aws_s3_bucket.logs.bucket_regional_domain_name
+    origin_id   = "Logs-Endpoint"
 
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-    }
+    origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
   }
 
+  # Log uploads. The upload edge function checks every request and rewrites it to the
+  # upload's fixed path in the logs bucket.
   ordered_cache_behavior {
     path_pattern           = "/log-upload"
-    target_origin_id       = "S3-Endpoint"
-    viewer_protocol_policy = "https-only"
-
-    allowed_methods = ["GET", "HEAD", "PUT", "OPTIONS", "DELETE", "POST", "PATCH"]
-    cached_methods  = ["GET", "HEAD"]
-
-    compress                 = true
-    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.upload_token_header.id
-
-    dynamic "lambda_function_association" {
-      for_each = var.lambda_log_upload_arn != "" ? [1] : []
-      content {
-        event_type   = "viewer-request"
-        lambda_arn   = var.lambda_log_upload_arn
-        include_body = false
-      }
-    }
-
-    dynamic "lambda_function_association" {
-      for_each = var.lambda_log_upload_arn != "" ? [1] : []
-      content {
-        event_type = "origin-response"
-        lambda_arn = var.lambda_log_upload_arn
-      }
-    }
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/received/logs/*"
-    target_origin_id       = "S3-Endpoint"
-    viewer_protocol_policy = "https-only"
-
-    allowed_methods = ["GET", "HEAD", "PUT", "OPTIONS", "DELETE", "POST", "PATCH"]
-    cached_methods  = ["GET", "HEAD"]
-
-    compress                 = true
-    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.upload_token_header.id
-
-    dynamic "lambda_function_association" {
-      for_each = var.lambda_log_upload_arn != "" ? [1] : []
-      content {
-        event_type   = "viewer-request"
-        lambda_arn   = var.lambda_log_upload_arn
-        include_body = false
-      }
-    }
-
-    dynamic "lambda_function_association" {
-      for_each = var.lambda_log_upload_arn != "" ? [1] : []
-      content {
-        event_type = "origin-response"
-        lambda_arn = var.lambda_log_upload_arn
-      }
-    }
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/received/*"
-    target_origin_id       = "S3-Endpoint"
+    target_origin_id       = "Logs-Endpoint"
     viewer_protocol_policy = "https-only"
 
     allowed_methods = ["GET", "HEAD", "PUT", "OPTIONS", "DELETE", "POST", "PATCH"]
@@ -155,9 +94,7 @@ resource "aws_cloudfront_distribution" "cdn" {
     cache_policy_id = data.aws_cloudfront_cache_policy.caching_optimized.id
   }
 
-  # Default behavior: use the S3-Web-Endpoint.
-  # Because S3 website endpoints only support HTTP, accessing this via HTTPS will fail,
-  # ensuring that only the defined behaviors are allowed.
+  # Default behavior: read-only access to the site bucket, uncached.
   default_cache_behavior {
     target_origin_id       = "S3-Endpoint"
     viewer_protocol_policy = "redirect-to-https"

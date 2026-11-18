@@ -19,6 +19,7 @@ resource "aws_lambda_function" "log_upload" {
       NOTIFY_LAMBDA_ARN          = var.notify_lambda_arn
       NOTIFY_LOG_TEMPLATE_ID     = var.notify_log_template_id
       UPLOAD_LINK_EXPIRY_SECONDS = tostring(var.upload_link_expiry_seconds)
+      LOG_RETENTION_DAYS         = tostring(var.log_retention_days)
       LOG_INVITE_TRACKING_TABLE  = aws_dynamodb_table.log_invite_tracking.name
       LOG_UPLOAD_TRACKING_TABLE  = aws_dynamodb_table.log_upload_tracking.name
       MNO_EMAIL_SSM_PREFIX       = var.mno_email_ssm_prefix

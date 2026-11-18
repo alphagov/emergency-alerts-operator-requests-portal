@@ -16,6 +16,8 @@ LOG_INVITE_TRACKING_TABLE = os.environ["LOG_INVITE_TRACKING_TABLE"]
 LOG_UPLOAD_TRACKING_TABLE = os.environ["LOG_UPLOAD_TRACKING_TABLE"]
 # Upload links expire this long after the broadcast start (MNOs upload within 2 days of the broadcast)
 EXPIRY_SECONDS = int(os.environ.get("UPLOAD_LINK_EXPIRY_SECONDS", "172800"))
+# Records are deleted this long after the link expires.
+RETENTION_DAYS = int(os.environ.get("LOG_RETENTION_DAYS", "365"))
 MNO_EMAIL_SSM_PREFIX = os.environ.get("MNO_EMAIL_SSM_PREFIX", "/operator-portal/mno-emails")
 MNO_ID_SSM_PREFIX = os.environ.get("MNO_ID_SSM_PREFIX", "/operator-portal/mno-ids")
 
@@ -95,6 +97,11 @@ def already_invited(mno_id: str, broadcast_id: str) -> bool:
     return "Item" in resp
 
 
+def _delete_at(broadcast_start: str) -> str:
+    """DynamoDB TTL value (epoch seconds) for records relating to this broadcast."""
+    return str(int((_upload_link_expiry(broadcast_start) + timedelta(days=RETENTION_DAYS)).timestamp()))
+
+
 def mark_invited(mno_label: str, broadcast_id: str, mno_name: str, alert_time: str, upload_request_id: str):
     """
     upload_request_id is the key of the upload link record, kept so the link can be released
@@ -108,6 +115,7 @@ def mark_invited(mno_label: str, broadcast_id: str, mno_name: str, alert_time: s
             "MnoName": {"S": mno_name},
             "AlertTime": {"S": alert_time},
             "UploadRequestId": {"S": upload_request_id},
+            "DeleteAt": {"N": _delete_at(alert_time)},
         },
     )
 
@@ -141,6 +149,7 @@ def register_upload_reference(
                 "MnoId": {"S": mno_id},
                 "MnoName": {"S": mno_name},
                 "BroadcastId": {"S": broadcast_id},
+                "DeleteAt": {"N": _delete_at(broadcast_start)},
             },
             ConditionExpression="attribute_not_exists(RequestId)",
         )
@@ -196,7 +205,7 @@ def lambda_handler(event, context):
     }
 
     mno_id is the operator name key used to look up both the contact email and the
-    32-character portal identifier from SSM. The portal identifier is used in upload
+    UUID portal identifier from SSM. The portal identifier is used in upload
     URLs and DynamoDB keys; it never appears in the event payload or the invite email
     body text.
     """

@@ -35,6 +35,7 @@
 
         <script>
           const UPLOAD_ORIGIN = window.location.origin;
+          const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
           document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -55,6 +56,10 @@
                 return window.location.href = 'invalid-request.html';
               }
 
+              if (fileEl.files[0].size > MAX_UPLOAD_BYTES) {
+                return window.location.href = 'file-too-large.html';
+              }
+
               const uploadUrl = `${UPLOAD_ORIGIN}/log-upload?mno=${encodeURIComponent(mnoId)}&broadcast_id=${encodeURIComponent(broadcastId)}`;
 
               try {
@@ -72,6 +77,9 @@
                 switch (resp.status) {
                   case 400:
                     window.location.href = 'invalid-request.html';
+                    break;
+                  case 413:
+                    window.location.href = 'file-too-large.html';
                     break;
                   case 403:
                     if (errType === 'expired_link') {

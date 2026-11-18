@@ -60,6 +60,11 @@ resource "aws_iam_role_policy" "lambda_policy" {
           "arn:aws:s3:::${var.log_bucket}",
           "arn:aws:s3:::${var.log_bucket}/*"
         ]
+      },
+      {
+        Effect   = "Allow",
+        Action   = ["kms:Decrypt"],
+        Resource = var.log_bucket_kms_key_arn
       }
     ]
   })

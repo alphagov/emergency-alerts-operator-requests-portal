@@ -1,11 +1,13 @@
 locals {
-  bucket_name = "${var.project_name}-${var.environment}-static"
+  bucket_name      = "${var.project_name}-${var.environment}-static"
+  logs_bucket_name = "${var.project_name}-logs-${var.environment}"
 
   footer_html = file("${path.module}/files/templates/footer.html.tpl")
 
   page_configs = {
     "automate-upload.html" = { title = "Automated Log Uploads - Operator Portal", content_file = "automate-upload.html" }
     "error.html"           = { title = "Error - Operator Portal", content_file = "error.html" }
+    "file-too-large.html"  = { title = "File Too Large - Operator Portal", content_file = "file-too-large.html" }
     "index.html"           = { title = "Welcome to the Operator Portal", content_file = "index.html" }
     "invalid-request.html" = { title = "Invalid Request - Operator Portal", content_file = "invalid-request.html" }
     "link-expired.html"    = { title = "Link Expired - Operator Portal", content_file = "link-expired.html" }

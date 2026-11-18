@@ -34,11 +34,9 @@ module "lambda_uploaded_logs_notifier" {
   source = "../../modules/operator-request-portal-lambda-functions/log-mgt-functions/lambda-uploaded-logs-notifier"
 
   environment = local.environment
-  # CloudFront's upload cache behaviors target the static-site bucket as their origin
-  # (see cloudfront.tf), so uploaded CBC logs land there. This must point at that
-  # bucket, both for S3 read access and for the S3->Lambda invoke permission to match
-  # the real bucket notification.
-  log_bucket                = module.operator_request_portal_static_site.s3_bucket_name
+  # Uploaded CBC logs land in the private logs bucket (see the static site module's logs.tf)
+  log_bucket                = module.operator_request_portal_static_site.logs_bucket_name
+  log_bucket_kms_key_arn    = module.operator_request_portal_static_site.logs_kms_key_arn
   gds_aws_profile           = var.gds_aws_profile
   notify_lambda_arn         = module.notify_email_communications.notify_lambda_function_arn
   notify_template_id        = local.notify_templates.log_download
@@ -65,6 +63,7 @@ module "lambda_log_upload" {
   notify_lambda_arn          = module.notify_email_communications.notify_lambda_function_arn
   notify_log_template_id     = local.notify_templates.log_upload_invite
   upload_link_expiry_seconds = var.upload_link_expiry_seconds
+  log_retention_days         = var.log_retention_days
 }
 
 # Lambda@Edge for log upload
@@ -88,6 +87,9 @@ module "operator_request_portal_static_site" {
   domain_name    = local.domain_name
   hosted_zone_id = local.hosted_zone_id
   tags           = var.tags
+
+  log_retention_days    = var.log_retention_days
+  log_reader_role_names = var.log_reader_role_names
 
   # Pass Lambda@Edge ARN with version
   lambda_log_upload_arn = module.lambda_edge_log_upload.log_upload_edge_arn
