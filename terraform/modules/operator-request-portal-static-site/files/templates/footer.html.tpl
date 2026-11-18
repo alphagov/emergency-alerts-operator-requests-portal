@@ -29,9 +29,6 @@
               <a class="govuk-footer__link" href="/accessibility-statement.html">Accessibility statement</a>
             </li>
             <li class="govuk-footer__inline-list-item">
-              <a class="govuk-footer__link" href="https://www.gov.uk/government/organisations/department-for-science-innovation-and-technology/about/personal-information-charter">Privacy</a>
-            </li>
-            <li class="govuk-footer__inline-list-item">
               <a class="govuk-footer__link" href="mailto:emergency-alerts-support@dsit.gov.uk">Contact</a>
             </li>
           </ul>
