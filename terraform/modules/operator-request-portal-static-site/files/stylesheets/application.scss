@@ -1,0 +1,16 @@
+@use "node_modules/govuk-frontend/dist/govuk" as *;
+
+// Scrollable block for example URLs and commands. It is focusable (tabindex="0")
+// so keyboard users can scroll it horizontally.
+.app-code-block {
+  margin: 0 0 govuk-spacing(4);
+  padding: govuk-spacing(3);
+  overflow-x: auto;
+  border: 1px solid govuk-functional-colour(surface-border);
+  background-color: govuk-functional-colour(surface-background);
+  color: govuk-functional-colour(surface-text);
+
+  &:focus {
+    @include govuk-focused-box;
+  }
+}
