@@ -84,27 +84,6 @@ resource "aws_kms_key_policy" "logs" {
         Condition = {
           StringEquals = { "AWS:SourceArn" = aws_cloudfront_distribution.cdn.arn }
         }
-      },
-      {
-        Sid       = "AllowAccessTrailToEncryptLogFiles"
-        Effect    = "Allow"
-        Principal = { Service = "cloudtrail.amazonaws.com" }
-        Action    = "kms:GenerateDataKey*"
-        Resource  = "*"
-        Condition = {
-          StringEquals = { "AWS:SourceArn" = local.access_trail_arn }
-          StringLike   = { "kms:EncryptionContext:aws:cloudtrail:arn" = "arn:aws:cloudtrail:*:${data.aws_caller_identity.current.account_id}:trail/*" }
-        }
-      },
-      {
-        Sid       = "AllowAccessTrailToDescribeKey"
-        Effect    = "Allow"
-        Principal = { Service = "cloudtrail.amazonaws.com" }
-        Action    = "kms:DescribeKey"
-        Resource  = "*"
-        Condition = {
-          StringEquals = { "AWS:SourceArn" = local.access_trail_arn }
-        }
       }
       ], length(local.log_reader_role_arns) == 0 ? [] : [
       {
