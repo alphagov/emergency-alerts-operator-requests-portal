@@ -33,11 +33,12 @@ resource "aws_s3_bucket_policy" "static_site_policy" {
 }
 
 resource "aws_s3_object" "html_files" {
-  for_each     = local.html_files_map
-  bucket       = aws_s3_bucket.static_site.bucket
-  key          = each.key
-  content      = each.value
-  content_type = "text/html"
+  for_each      = local.html_files_map
+  bucket        = aws_s3_bucket.static_site.bucket
+  key           = each.key
+  content       = each.value
+  content_type  = "text/html"
+  cache_control = "no-cache"
 
   server_side_encryption = "aws:kms"
   kms_key_id             = aws_kms_key.site.arn
@@ -69,6 +70,8 @@ resource "aws_s3_object" "assets" {
     {
       "css"   = "text/css"
       "js"    = "application/javascript"
+      "json"  = "application/manifest+json"
+      "ico"   = "image/x-icon"
       "svg"   = "image/svg+xml"
       "png"   = "image/png"
       "jpg"   = "image/jpeg"
@@ -82,6 +85,9 @@ resource "aws_s3_object" "assets" {
     element(split(".", each.value), length(split(".", each.value)) - 1),
     "application/octet-stream"
   )
+
+  # Asset names don't change between releases, so browsers must also revalidate these
+  cache_control = "no-cache"
 
   server_side_encryption = "aws:kms"
   kms_key_id             = aws_kms_key.site.arn

@@ -1,106 +1,206 @@
-    <div class="govuk-width-container">
-      <main class="govuk-main-wrapper" id="main-content">
-        <h1 class="govuk-heading-xl">Upload Logs</h1>
+        <div class="govuk-grid-row">
+          <div class="govuk-grid-column-two-thirds">
+            <div id="error-summary-container"></div>
 
-        <form id="uploadForm">
-          <div class="govuk-form-group">
-            <label class="govuk-label" for="mnoInput">MNO identifier</label>
-            <input
-              type="text"
-              id="mnoInput"
-              class="govuk-input govuk-input--width-10"
-              autocomplete="off"
-            >
+            <h1 class="govuk-heading-l">Upload Logs</h1>
+
+            <form id="uploadForm" novalidate>
+              <div class="govuk-form-group" id="mnoInput-form-group">
+                <label class="govuk-label" for="mnoInput">MNO identifier</label>
+                <input
+                  type="text"
+                  id="mnoInput"
+                  class="govuk-input"
+                  autocomplete="off"
+                  spellcheck="false"
+                >
+              </div>
+              <div class="govuk-form-group" id="broadcastIdInput-form-group">
+                <label class="govuk-label" for="broadcastIdInput">Broadcast ID</label>
+                <input
+                  type="text"
+                  id="broadcastIdInput"
+                  class="govuk-input"
+                  autocomplete="off"
+                  spellcheck="false"
+                >
+              </div>
+              <div class="govuk-form-group" id="logFile-form-group">
+                <label class="govuk-label" for="logFile">Select ZIP file</label>
+                <input
+                  type="file"
+                  id="logFile"
+                  class="govuk-file-upload"
+                  accept=".zip"
+                >
+              </div>
+              <button type="submit" class="govuk-button" data-module="govuk-button" data-prevent-double-click="true">Upload Logs</button>
+            </form>
           </div>
-          <div class="govuk-form-group">
-            <label class="govuk-label" for="broadcastIdInput">Broadcast ID</label>
-            <input
-              type="text"
-              id="broadcastIdInput"
-              class="govuk-input"
-              autocomplete="off"
-            >
-          </div>
-          <div class="govuk-form-group">
-            <label class="govuk-label" for="logFile">Select ZIP file</label>
-            <input
-              type="file"
-              id="logFile"
-              class="govuk-file-upload"
-              accept=".zip"
-            >
-          </div>
-          <button type="submit" class="govuk-button">Upload Logs</button>
-        </form>
+        </div>
 
         <script>
-          const UPLOAD_ORIGIN = window.location.origin;
-          const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+          (function () {
+            const UPLOAD_ORIGIN = window.location.origin;
+            const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+            const FIELDS = ['mnoInput', 'broadcastIdInput', 'logFile'];
+            const PAGE_TITLE = document.title;
+            const SUPPORT_EMAIL = 'emergency-alerts-support@dsit.gov.uk';
 
-          document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('uploadForm');
+            const mnoInput = document.getElementById('mnoInput');
+            const broadcastIdInput = document.getElementById('broadcastIdInput');
+            const fileInput = document.getElementById('logFile');
+            const summaryContainer = document.getElementById('error-summary-container');
+            let uploading = false;
+
             const urlParams = new URLSearchParams(window.location.search);
-            const mnoParam = urlParams.get('mno');
-            const broadcastIdParam = urlParams.get('broadcast_id');
+            if (urlParams.get('mno')) mnoInput.value = urlParams.get('mno');
+            if (urlParams.get('broadcast_id')) broadcastIdInput.value = urlParams.get('broadcast_id');
 
-            if (mnoParam) document.getElementById('mnoInput').value = mnoParam;
-            if (broadcastIdParam) document.getElementById('broadcastIdInput').value = broadcastIdParam;
+            function clearErrors() {
+              summaryContainer.replaceChildren();
+              document.title = PAGE_TITLE;
+              FIELDS.forEach(id => {
+                const input = document.getElementById(id);
+                const message = document.getElementById(id + '-error');
+                if (message) message.remove();
+                document.getElementById(id + '-form-group').classList.remove('govuk-form-group--error');
+                input.classList.remove('govuk-input--error', 'govuk-file-upload--error');
+                input.removeAttribute('aria-describedby');
+              });
+            }
 
-            document.getElementById('uploadForm').addEventListener('submit', async e => {
+            function showErrors(errors, description) {
+              clearErrors();
+              document.title = 'Error: ' + PAGE_TITLE;
+
+              const summary = document.createElement('div');
+              summary.className = 'govuk-error-summary';
+              summary.tabIndex = -1;
+              const alert = document.createElement('div');
+              alert.setAttribute('role', 'alert');
+              const title = document.createElement('h2');
+              title.className = 'govuk-error-summary__title';
+              title.textContent = 'There is a problem';
+              const body = document.createElement('div');
+              body.className = 'govuk-error-summary__body';
+              if (description) {
+                const p = document.createElement('p');
+                p.className = 'govuk-body';
+                p.textContent = description + ' If the problem continues, contact Emergency Alerts Support at ';
+                const link = document.createElement('a');
+                link.className = 'govuk-link';
+                link.href = 'mailto:' + SUPPORT_EMAIL;
+                link.textContent = SUPPORT_EMAIL;
+                p.append(link, '.');
+                body.appendChild(p);
+              }
+              const list = document.createElement('ul');
+              list.className = 'govuk-list govuk-error-summary__list';
+
+              errors.forEach(({ field, message }) => {
+                const item = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = '#' + field;
+                link.textContent = message;
+                link.addEventListener('click', e => {
+                  e.preventDefault();
+                  document.querySelector('label[for="' + field + '"]').scrollIntoView();
+                  document.getElementById(field).focus({ preventScroll: true });
+                });
+                item.appendChild(link);
+                list.appendChild(item);
+
+                const input = document.getElementById(field);
+                const errorMessage = document.createElement('p');
+                errorMessage.id = field + '-error';
+                errorMessage.className = 'govuk-error-message';
+                const prefix = document.createElement('span');
+                prefix.className = 'govuk-visually-hidden';
+                prefix.textContent = 'Error:';
+                errorMessage.append(prefix, ' ' + message);
+                input.before(errorMessage);
+                document.getElementById(field + '-form-group').classList.add('govuk-form-group--error');
+                input.classList.add(input.type === 'file' ? 'govuk-file-upload--error' : 'govuk-input--error');
+                input.setAttribute('aria-describedby', field + '-error');
+              });
+
+              body.appendChild(list);
+              alert.append(title, body);
+              summary.appendChild(alert);
+              summaryContainer.appendChild(summary);
+              summary.focus();
+            }
+
+            function validate(mnoId, broadcastId, file) {
+              const errors = [];
+              if (!mnoId) errors.push({ field: 'mnoInput', message: 'Enter your MNO identifier' });
+              if (!broadcastId) errors.push({ field: 'broadcastIdInput', message: 'Enter the Broadcast ID' });
+              if (!file) {
+                errors.push({ field: 'logFile', message: 'Select a ZIP file' });
+              } else if (file.size > MAX_UPLOAD_BYTES) {
+                errors.push({ field: 'logFile', message: 'Log archives must be 50 MB or smaller' });
+              }
+              return errors;
+            }
+
+            form.addEventListener('submit', async e => {
               e.preventDefault();
+              if (uploading) return;
 
-              const mnoId = document.getElementById('mnoInput').value.trim();
-              const broadcastId = document.getElementById('broadcastIdInput').value.trim();
-              const fileEl = document.getElementById('logFile');
+              const mnoId = mnoInput.value.trim();
+              const broadcastId = broadcastIdInput.value.trim();
+              const file = fileInput.files[0];
 
-              if (!mnoId || !broadcastId || !fileEl.files.length) {
-                return window.location.href = 'invalid-request.html';
-              }
+              const errors = validate(mnoId, broadcastId, file);
+              if (errors.length) return showErrors(errors);
 
-              if (fileEl.files[0].size > MAX_UPLOAD_BYTES) {
-                return window.location.href = 'file-too-large.html';
-              }
-
+              clearErrors();
+              uploading = true;
               const uploadUrl = `${UPLOAD_ORIGIN}/log-upload?mno=${encodeURIComponent(mnoId)}&broadcast_id=${encodeURIComponent(broadcastId)}`;
 
+              let resp;
               try {
-                const resp = await fetch(uploadUrl, {
+                resp = await fetch(uploadUrl, {
                   method: 'PUT',
-                  body: fileEl.files[0],
+                  body: file,
                   headers: { 'Content-Type': 'application/zip' }
                 });
-
-                if (resp.ok) {
-                  return window.location.href = 'upload-success.html';
-                }
-
-                const errType = resp.headers.get('X-Error-Type');
-                switch (resp.status) {
-                  case 400:
-                    window.location.href = 'invalid-request.html';
-                    break;
-                  case 413:
-                    window.location.href = 'file-too-large.html';
-                    break;
-                  case 403:
-                    if (errType === 'expired_link') {
-                      window.location.href = 'link-expired.html';
-                    } else if (errType === 'already_used') {
-                      window.location.href = 'max-limit.html';
-                    } else if (errType === 'invalid_request') {
-                      window.location.href = 'invalid-request.html';
-                    } else {
-                      window.location.href = 'error.html';
-                    }
-                    break;
-                  default:
-                    window.location.href = 'error.html';
-                }
               } catch (err) {
                 console.error('Upload error:', err);
                 window.location.href = 'error.html';
+                return;
+              }
+
+              if (resp.ok) {
+                window.location.href = 'upload-success.html';
+                return;
+              }
+
+              uploading = false;
+              const errType = resp.headers.get('X-Error-Type');
+
+              // Errors the MNO can fix on this form are shown here; the rest go to their own pages
+              if (resp.status === 400 || (resp.status === 403 && errType === 'invalid_request')) {
+                return showErrors(
+                  [
+                    { field: 'mnoInput', message: 'Check your MNO identifier' },
+                    { field: 'broadcastIdInput', message: 'Check the Broadcast ID' }
+                  ],
+                  'We couldn’t process your upload because the Mobile Operator identification code or Broadcast ID was not recognised. Check them and try again.'
+                );
+              }
+              if (resp.status === 413) {
+                return showErrors([{ field: 'logFile', message: 'Log archives must be 50 MB or smaller' }]);
+              }
+              if (resp.status === 403 && errType === 'expired_link') {
+                window.location.href = 'link-expired.html';
+              } else if (resp.status === 403 && errType === 'already_used') {
+                window.location.href = 'max-limit.html';
+              } else {
+                window.location.href = 'error.html';
               }
             });
-          });
+          })();
         </script>
-      </main>
-    </div>
