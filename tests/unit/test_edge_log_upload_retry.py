@@ -13,6 +13,7 @@ MODULE_PATH = (
 MNO_ID = "MNO1"
 BROADCAST_ID = "broadcast-123"
 MNO_HEADER = {"x-upload-token": [{"key": "X-Upload-Token", "value": MNO_ID}]}
+SIZE_HEADER = {"content-length": [{"key": "Content-Length", "value": "1024"}]}
 
 
 def _s3_uri(broadcast=BROADCAST_ID):
@@ -34,7 +35,7 @@ def test_viewer_request_allows_valid_link_without_marking_it_used():
         }
     }
 
-    req = {"method": "PUT", "querystring": f"mno={MNO_ID}&broadcast_id={BROADCAST_ID}"}
+    req = {"method": "PUT", "querystring": f"mno={MNO_ID}&broadcast_id={BROADCAST_ID}", "headers": SIZE_HEADER}
     result = module._handle_viewer_request(req)
 
     assert result["uri"] == _s3_uri()
@@ -46,7 +47,7 @@ def test_viewer_request_rejects_link_already_marked_used():
     module = _load()
     module.ddb.get_item.return_value = {"Item": {"Used": {"BOOL": True}}}
 
-    req = {"method": "PUT", "querystring": f"mno={MNO_ID}&broadcast_id={BROADCAST_ID}"}
+    req = {"method": "PUT", "querystring": f"mno={MNO_ID}&broadcast_id={BROADCAST_ID}", "headers": SIZE_HEADER}
     result = module._handle_viewer_request(req)
 
     assert result["status"] == "403"
@@ -112,6 +113,7 @@ def test_lambda_handler_dispatches_origin_response_only_after_viewer_request():
                     "request": {
                         "method": "PUT",
                         "querystring": f"mno={MNO_ID}&broadcast_id={BROADCAST_ID}",
+                        "headers": SIZE_HEADER,
                     },
                 }
             }

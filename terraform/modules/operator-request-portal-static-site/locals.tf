@@ -1,17 +1,18 @@
 locals {
-  bucket_name = "${var.project_name}-${var.environment}-static"
+  bucket_name      = "${var.project_name}-${var.environment}-static"
+  logs_bucket_name = "${var.project_name}-logs-${var.environment}"
 
   footer_html = file("${path.module}/files/templates/footer.html.tpl")
 
   page_configs = {
-    "automate-upload.html" = { title = "Automated Log Uploads - Operator Portal", content_file = "automate-upload.html" }
-    "error.html"           = { title = "Error - Operator Portal", content_file = "error.html" }
-    "index.html"           = { title = "Welcome to the Operator Portal", content_file = "index.html" }
-    "invalid-request.html" = { title = "Invalid Request - Operator Portal", content_file = "invalid-request.html" }
-    "link-expired.html"    = { title = "Link Expired - Operator Portal", content_file = "link-expired.html" }
-    "max-limit.html"       = { title = "Maximum Limit Reached - Operator Portal", content_file = "max-limit.html" }
-    "upload-logs.html"     = { title = "Upload Logs - Operator Portal", content_file = "upload-logs.html" }
-    "upload-success.html"  = { title = "Upload Success - Operator Portal", content_file = "upload-success.html" }
+    "accessibility-statement.html" = { title = "Accessibility Statement - Operator Portal", content_file = "accessibility-statement.html" }
+    "automate-upload.html"         = { title = "Automated Log Uploads - Operator Portal", content_file = "automate-upload.html" }
+    "error.html"                   = { title = "Error - Operator Portal", content_file = "error.html" }
+    "index.html"                   = { title = "Welcome to the Operator Portal", content_file = "index.html" }
+    "link-expired.html"            = { title = "Link Expired - Operator Portal", content_file = "link-expired.html" }
+    "max-limit.html"               = { title = "Maximum Limit Reached - Operator Portal", content_file = "max-limit.html" }
+    "upload-logs.html"             = { title = "Upload Logs - Operator Portal", content_file = "upload-logs.html" }
+    "upload-success.html"          = { title = "Upload Success - Operator Portal", content_file = "upload-success.html" }
   }
 
   html_files_map = {

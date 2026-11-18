@@ -69,6 +69,10 @@ def test_log_upload_end_to_end(broadcast_id, mno_id, mno_portal_id, mno_email, m
     logger.info("Actual uploaded S3 key: %s", s3_key)
     assert s3_object_exists(s3_key), f"Expected S3 object not found: s3://{config['log_bucket_name']}/{s3_key}"
 
+    logger.info("Step 4b: confirming the uploaded log can't be downloaded through the portal")
+    read_back = requests.get(f"{config['portal_url']}/{s3_key}", timeout=30)
+    assert read_back.status_code != 200, "Uploaded log was readable through the portal; it must be write-only"
+
     logger.info("Step 5: confirming internal notify notification fired for this key")
     matches = wait_for_cloudwatch_logs(
         config["upload_notifier_lambda_name"],

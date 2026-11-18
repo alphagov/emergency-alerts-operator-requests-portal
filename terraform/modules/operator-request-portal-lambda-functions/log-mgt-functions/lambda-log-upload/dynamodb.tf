@@ -9,6 +9,17 @@ resource "aws_dynamodb_table" "log_invite_tracking" {
     type = "S"
   }
 
+  deletion_protection_enabled = true
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  ttl {
+    attribute_name = "DeleteAt"
+    enabled        = true
+  }
+
   tags = {
     Environment = var.environment
     Name        = "operator-request-portal-log-invites"
@@ -24,6 +35,17 @@ resource "aws_dynamodb_table" "log_upload_tracking" {
   attribute {
     name = "RequestId"
     type = "S"
+  }
+
+  deletion_protection_enabled = true
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  ttl {
+    attribute_name = "DeleteAt"
+    enabled        = true
   }
 
   tags = {

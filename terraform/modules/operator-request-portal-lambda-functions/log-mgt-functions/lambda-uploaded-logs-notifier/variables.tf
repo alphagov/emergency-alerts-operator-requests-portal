@@ -4,7 +4,7 @@ variable "environment" {
 }
 
 variable "log_bucket" {
-  description = "Name of the S3 bucket CloudFront actually writes uploaded CBC logs to (the static-site/origin bucket), used for S3 read access and the S3->Lambda invoke permission"
+  description = "Name of the private bucket uploaded CBC logs are written to, used for S3 read access and the S3->Lambda trigger"
   type        = string
 }
 
@@ -42,4 +42,9 @@ variable "notify_rejected_template_id" {
   description = "GOV.UK Notify template ID for the Alerts team email about a rejected upload. Empty skips the email."
   type        = string
   default     = ""
+}
+
+variable "log_bucket_kms_key_arn" {
+  description = "ARN of the KMS key encrypting the logs bucket, so the notifier can read uploads"
+  type        = string
 }

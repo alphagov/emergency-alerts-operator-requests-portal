@@ -29,3 +29,26 @@ variable "lambda_log_upload_arn" {
   type        = string
   default     = ""
 }
+
+variable "log_retention_days" {
+  description = "Days uploaded logs are kept before deletion."
+  type        = number
+  default     = 365
+}
+
+variable "waf_allowed_country_codes" {
+  description = "Countries allowed through the WAF."
+  type        = list(string)
+  default     = ["GB"]
+}
+
+variable "waf_rate_limit_per_minute" {
+  description = "Requests allowed per IP address per minute before the WAF blocks that IP."
+  type        = number
+  default     = 600
+}
+
+variable "log_reader_role_names" {
+  description = "IAM role names that can decrypt uploaded logs."
+  type        = list(string)
+}

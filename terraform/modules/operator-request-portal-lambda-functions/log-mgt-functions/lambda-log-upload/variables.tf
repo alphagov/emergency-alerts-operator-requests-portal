@@ -24,6 +24,12 @@ variable "upload_link_expiry_seconds" {
   default     = 172800
 }
 
+variable "log_retention_days" {
+  description = "Days invite and upload records are kept after their upload link expires"
+  type        = number
+  default     = 365
+}
+
 variable "eas_preview_account_id" {
   type        = string
   description = "EAS Preview account ID for cross-account Lambda invocation"
@@ -49,7 +55,7 @@ variable "mno_email_ssm_prefix" {
 }
 
 variable "mno_id_ssm_prefix" {
-  description = "SSM Parameter Store prefix for MNO 32-character portal identifiers"
+  description = "SSM Parameter Store prefix for MNO portal identifiers (UUIDs)"
   type        = string
   default     = "/operator-portal/mno-ids"
 }

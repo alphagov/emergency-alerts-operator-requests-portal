@@ -34,6 +34,16 @@ variable "gds_aws_profile" {
   type        = string
 }
 
+variable "log_reader_role_names" {
+  description = "IAM role names (wildcards allowed) that can decrypt uploaded logs with the GDS CLI read-only profile"
+  type        = list(string)
+}
+
+variable "log_retention_days" {
+  description = "Days uploaded logs and their tracking records are kept before deletion, as agreed in the MNO contracts"
+  type        = number
+}
+
 variable "upload_link_expiry_seconds" {
   description = "Seconds after the broadcast start that MNO upload links remain valid"
   type        = number

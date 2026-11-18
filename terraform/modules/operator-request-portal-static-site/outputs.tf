@@ -22,3 +22,14 @@ output "cloudfront_distribution_arn" {
   description = "CloudFront distribution ARN"
   value       = aws_cloudfront_distribution.cdn.arn
 }
+
+
+output "logs_bucket_name" {
+  description = "The name of the private bucket holding uploaded logs"
+  value       = aws_s3_bucket.logs.id
+}
+
+output "logs_kms_key_arn" {
+  description = "ARN of the KMS key encrypting uploaded logs"
+  value       = aws_kms_key.logs.arn
+}

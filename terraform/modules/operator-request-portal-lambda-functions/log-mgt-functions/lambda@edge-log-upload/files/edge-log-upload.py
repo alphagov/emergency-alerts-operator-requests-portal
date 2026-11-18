@@ -17,6 +17,9 @@ S3_KEY_RE = re.compile(r"^/received/logs/(?P<broadcast>[^/]+)/CBC_[^_]+_[^_]+_(?
 
 MNO_ID_HEADER_NAME = "x-upload-token"
 
+# Largest log archive accepted. Real archives are far smaller; this stops oversized uploads at the edge.
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+
 
 def _mask_portal_id(portal_id: str) -> str:
     """Log-safe form of an MNO portal identifier: keeps a short prefix for tracing, masks the rest."""
@@ -126,11 +129,30 @@ def _validate_request(mno_id: str, broadcast_id: str):
     return item, None
 
 
+def _check_upload_size(req):
+    """Reject uploads with no declared size or over MAX_UPLOAD_BYTES before they reach S3."""
+    header = req.get("headers", {}).get("content-length")
+    if not header:
+        return error_response(411, "Length Required", "Content-Length header is required", "length_required")
+    try:
+        size = int(header[0].get("value", ""))
+    except (TypeError, ValueError):
+        return error_response(400, "Bad Request", "Invalid Content-Length header", "invalid_content_length")
+    if size > MAX_UPLOAD_BYTES:
+        logger.warning("Rejected upload of %d bytes (limit %d)", size, MAX_UPLOAD_BYTES)
+        return error_response(413, "Payload Too Large", "Log archives must be 50 MB or smaller", "file_too_large")
+    return None
+
+
 def _handle_viewer_request(req):
     logger.info("Lambda@Edge invoked: method=%s uri=%s", req.get("method"), req.get("uri"))
 
     if req.get("method") != "PUT":
         return error_response(403, "Forbidden", "Only PUT is allowed", "method_not_allowed")
+
+    err = _check_upload_size(req)
+    if err:
+        return err
 
     mno_id, broadcast_id = _parse_params(req.get("querystring", ""))
     item, err = _validate_request(mno_id, broadcast_id)

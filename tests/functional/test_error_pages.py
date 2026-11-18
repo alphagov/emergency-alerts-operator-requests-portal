@@ -4,7 +4,6 @@ import requests
 from config import config
 
 PAGES = {
-    "invalid-request.html": "Invalid Request",
     "link-expired.html": "Link Expired",
     "max-limit.html": "Maximum Limit Reached",
     "error.html": "Something Went Wrong",
