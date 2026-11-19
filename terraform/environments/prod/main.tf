@@ -1,0 +1,95 @@
+module "shared" {
+  source = "../../shared"
+
+  infra_mgt_state_bucket = var.infra_mgt_state_bucket
+  infra_mgt_state_key    = var.infra_mgt_state_key
+  infra_mgt_state_region = var.infra_mgt_state_region
+
+  notify_api_key_parameter_name = aws_ssm_parameter.notify_api_key.name
+  notify_api_key_parameter_arn  = aws_ssm_parameter.notify_api_key.arn
+}
+
+locals {
+  hosted_zone_id           = module.shared.hosted_zone_id
+  domain_name              = module.shared.domain_name
+  notify_api_key_parameter = module.shared.notify_api_key_parameter_name
+  notify_templates         = module.shared.notify_templates
+  alerts_team_emails       = module.shared.alerts_team_emails
+
+  environment  = var.environment
+  project_name = var.project_name
+}
+
+# Notify email communications service
+module "notify_email_communications" {
+  source = "../../modules/operator-request-portal-lambda-functions/notify-email-communications"
+
+  notify_api_key_parameter = local.notify_api_key_parameter
+  environment              = local.environment
+}
+
+# Notifies the Alerts team when an MNO's uploaded logs arrive
+module "lambda_uploaded_logs_notifier" {
+  source = "../../modules/operator-request-portal-lambda-functions/log-mgt-functions/lambda-uploaded-logs-notifier"
+
+  environment = local.environment
+  # Uploaded CBC logs land in the private logs bucket (see the static site module's logs.tf)
+  log_bucket                = module.operator_request_portal_static_site.logs_bucket_name
+  log_bucket_kms_key_arn    = module.operator_request_portal_static_site.logs_kms_key_arn
+  gds_aws_profile           = var.gds_aws_profile
+  notify_lambda_arn         = module.notify_email_communications.notify_lambda_function_arn
+  notify_template_id        = local.notify_templates.log_download
+  alerts_team_emails        = local.alerts_team_emails
+  log_invite_tracking_table = module.lambda_log_upload.log_invite_tracking_table_name
+
+  log_upload_tracking_table   = module.lambda_log_upload.log_upload_tracking_table_name
+  notify_rejected_template_id = try(local.notify_templates.log_upload_rejected, "")
+}
+
+# Keeps the S3 bucket notification as an in-place update during the rename. Replacing it could
+# briefly remove the bucket's only notification configuration.
+moved {
+  from = module.lambda_log_download
+  to   = module.lambda_uploaded_logs_notifier
+}
+
+# Log upload Lambda
+module "lambda_log_upload" {
+  source = "../../modules/operator-request-portal-lambda-functions/log-mgt-functions/lambda-log-upload"
+
+  environment                = local.environment
+  upload_domain              = local.domain_name
+  notify_lambda_arn          = module.notify_email_communications.notify_lambda_function_arn
+  notify_log_template_id     = local.notify_templates.log_upload_invite
+  upload_link_expiry_seconds = var.upload_link_expiry_seconds
+  log_retention_days         = var.log_retention_days
+}
+
+# Lambda@Edge for log upload
+module "lambda_edge_log_upload" {
+  source = "../../modules/operator-request-portal-lambda-functions/log-mgt-functions/lambda@edge-log-upload"
+
+  environment                   = local.environment
+  cloudfront_distribution_id    = module.operator_request_portal_static_site.cloudfront_distribution_id
+  log_upload_tracking_table_arn = module.lambda_log_upload.log_upload_tracking_table_arn
+
+  providers = {
+    aws.us_east_1 = aws.us_east_1
+  }
+}
+
+module "operator_request_portal_static_site" {
+  source = "../../modules/operator-request-portal-static-site"
+
+  project_name   = local.project_name
+  environment    = local.environment
+  domain_name    = local.domain_name
+  hosted_zone_id = local.hosted_zone_id
+  tags           = var.tags
+
+  log_retention_days    = var.log_retention_days
+  log_reader_role_names = var.log_reader_role_names
+
+  # Pass Lambda@Edge ARN with version
+  lambda_log_upload_arn = module.lambda_edge_log_upload.log_upload_edge_arn
+}

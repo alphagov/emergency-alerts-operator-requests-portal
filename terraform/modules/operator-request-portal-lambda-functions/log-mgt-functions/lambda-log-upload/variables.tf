@@ -42,6 +42,12 @@ variable "eas_staging_account_id" {
   default     = "460715564357"
 }
 
+variable "eas_prod_account_id" {
+  type        = string
+  description = "EAS Production account ID for cross-account Lambda invocation"
+  default     = "293642804791"
+}
+
 variable "eas_development_account_id" {
   type        = string
   description = "EAS Development account ID for cross-account Lambda invocation"

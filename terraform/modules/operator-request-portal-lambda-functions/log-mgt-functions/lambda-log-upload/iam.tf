@@ -78,6 +78,7 @@ locals {
     "mno-portal-development" = var.eas_development_account_id # eas-development
     "mno-portal-preview"     = var.eas_preview_account_id     # eas-preview
     "mno-portal-staging"     = var.eas_staging_account_id     # eas-staging
+    "mno-portal-prod"        = var.eas_prod_account_id        # eas-prod
   }
 }
 
@@ -88,4 +89,3 @@ resource "aws_lambda_permission" "allow_eas_api_invoke" {
   function_name = aws_lambda_function.log_upload.function_name
   principal     = "arn:aws:iam::${local.eas_invoking_account_ids[var.environment]}:root"
 }
-
