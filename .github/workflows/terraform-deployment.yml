@@ -95,3 +95,26 @@ jobs:
       approval_required: true
     secrets:
       account_id: "347116755493"
+
+  plan-prod:
+    needs: unit-tests
+    uses: ./.github/workflows/.terraform-plan.yml
+    with:
+      environment: prod
+      working_directory: terraform/environments/prod
+    secrets:
+      account_id: "873538328350"
+
+  apply-prod:
+    needs: [plan-prod, apply-staging]
+    if: |
+      always() && !cancelled() && needs.plan-prod.result == 'success' &&
+      needs.apply-staging.result == 'success' &&
+      github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    uses: ./.github/workflows/.terraform-apply.yml
+    with:
+      environment: prod
+      working_directory: terraform/environments/prod
+      approval_required: true
+    secrets:
+      account_id: "873538328350"
